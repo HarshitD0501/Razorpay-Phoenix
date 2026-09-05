@@ -9,7 +9,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import Decimal from "decimal.js";
-import { classifyByLlm, classifyByTable } from "../core/classify";
+import { LLM_MODEL, classifyByLlm, classifyByTable, geminiKey } from "../core/classify";
 import { generate } from "../sim/generate";
 import type { Bucket } from "../core/types";
 import { DEFAULTS, runArm, type ArmId, type ArmResult, type Params } from "./arms";
@@ -21,7 +21,7 @@ const argOf = (k: string, dflt: number) => {
 
 const N = argOf("n", 600);
 const SEED = argOf("seed", 42);
-const withLlm = process.argv.includes("--llm") && !!process.env.ANTHROPIC_API_KEY;
+const withLlm = process.argv.includes("--llm") && !!geminiKey();
 
 const cases = generate(N, SEED);
 
@@ -76,7 +76,7 @@ function table(rows: ArmResult[]) {
 }
 
 console.log(`\nPHOENIX EVAL  n=${N}  seed=${SEED}  tier B (deterministic sim)`);
-console.log(`classifier for arms D/E: ${withLlm ? "LLM (claude-sonnet-5)" : "table (no --llm / no key)"}\n`);
+console.log(`classifier for arms D/E: ${withLlm ? `LLM (${LLM_MODEL})` : "table (no --llm / no key)"}\n`);
 table(results);
 
 // ---- classifier recall, split by perturbation class -----------------------
@@ -135,7 +135,7 @@ const out = {
     n: N,
     seed: SEED,
     tier: "B",
-    classifier: withLlm ? "llm" : "table",
+    classifier: withLlm ? LLM_MODEL : "table",
     generatedAt: new Date().toISOString(),
   },
   arms: results,

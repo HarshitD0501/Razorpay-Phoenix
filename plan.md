@@ -1,3 +1,5 @@
+
+
 # Razorpay Phoenix — Build Plan
 
 **Track 03 (AI Revenue Recovery)** · deadline today · clock at authoring: **13:45 IST, 5 Sept 2026** → ~9.5h
@@ -6,37 +8,36 @@
 
 ## 0. Status — steps 0–8 shipped; tier A is live
 
-| # | Step | State | Evidence |
-|---|---|---|---|
-| 0 | Config: `package.json`, `tsconfig`, postcss, `.gitignore` (before any key), `.env.example` | **done** | `npx tsc --noEmit` clean |
-| 1 | Simulator, `decide()` core, gate, append-only audit, eval harness | **done** | `src/core/`, `src/sim/`, `npm test` 14/14 |
-| 2 | Arms 0–E, per-perturbation ablation, 0.3×–3× sweep, adversarial arm | **done** | `npm run eval` → `results/arms.json` |
-| 3 | Tier A adapters + probes + poller + webhook HMAC + replay check | **done, run live** | see below |
-| 4 | WhatsApp outbound (Twilio) | **done, delivered** | `twilio 201 SMac2f664d…` + live payment link |
-| 5 | W0 rescue surface + live downtime join | **done** | `/` → pick a failure → rescue card |
-| 6 | Dashboard: arms table, ablation, sweep, What-If, audit viewer | **done** | `/dashboard` |
-| 7 | WhatsApp inbound two-way agent | **done locally**, tunnel not attempted | 3-turn ladder verified over HTTP |
-| 8 | README with per-number tier labels + honest limits | **done** | `README.md` |
+| # | Step                                                                                              | State                                        | Evidence                                        |
+| - | ------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
+| 0 | Config:`package.json`, `tsconfig`, postcss, `.gitignore` (before any key), `.env.example` | **done**                               | `npx tsc --noEmit` clean                      |
+| 1 | Simulator,`decide()` core, gate, append-only audit, eval harness                                | **done**                               | `src/core/`, `src/sim/`, `npm test` 14/14 |
+| 2 | Arms 0–E, per-perturbation ablation, 0.3×–3× sweep, adversarial arm                           | **done**                               | `npm run eval` → `results/arms.json`       |
+| 3 | Tier A adapters + probes + poller + webhook HMAC + replay check                                   | **done, run live**                     | see below                                       |
+| 4 | WhatsApp outbound (Twilio)                                                                        | **done, delivered**                    | `twilio 201 SMac2f664d…` + live payment link |
+| 5 | W0 rescue surface + live downtime join                                                            | **done**                               | `/` → pick a failure → rescue card          |
+| 6 | Dashboard: arms table, ablation, sweep, What-If, audit viewer                                     | **done**                               | `/dashboard`                                  |
+| 7 | WhatsApp inbound two-way agent                                                                    | **done locally**, tunnel not attempted | 3-turn ladder verified over HTTP                |
+| 8 | README with per-number tier labels + honest limits                                                | **done**                               | `README.md`                                   |
 
 `npx next build` compiles all 10 routes. `git init` + first commit done; **not pushed** —
 that needs a decision about which account/remote.
 
 ### Tier A, actually run against the live test API (5 Sept 2026)
 
-| Probe | Result |
-|---|---|
-| `GET /v1/payments/downtimes` | **8 active** — netbanking DLXB, UPI kotak811, FPX BNPA_C, IDIB, 5× card; all `started`/`high`. W0's "not your card" line is joined against this, not a fixture. |
-| `orders.create` ×2, identical `receipt` | **200 + 200, two distinct orders** (`order_TYKiTuNmQad8HA`, `order_TYKiU9GTBQayTA`). No dedupe. |
-| `payment_links.create` ×2, identical `reference_id` | **200 then 400** — "already exists". Dedupes. |
-| Webhook replayed twice + tampered | `duplicate:false` → `duplicate:true` → **401 bad signature**. |
-| WhatsApp outbound | **Twilio 201**, real message on the demo phone carrying `https://rzp.io/rzp/fHsItNQ`. |
+| Probe                                                    | Result                                                                                                                                                                      |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/payments/downtimes`                           | **8 active** — netbanking DLXB, UPI kotak811, FPX BNPA_C, IDIB, 5× card; all `started`/`high`. W0's "not your card" line is joined against this, not a fixture. |
+| `orders.create` ×2, identical `receipt`             | **200 + 200, two distinct orders** (`order_TYKiTuNmQad8HA`, `order_TYKiU9GTBQayTA`). No dedupe.                                                                   |
+| `payment_links.create` ×2, identical `reference_id` | **200 then 400** — "already exists". Dedupes.                                                                                                                        |
+| Webhook replayed twice + tampered                        | `duplicate:false` → `duplicate:true` → **401 bad signature**.                                                                                                   |
+| WhatsApp outbound                                        | **Twilio 201**, real message on the demo phone carrying `https://rzp.io/rzp/fHsItNQ`.                                                                               |
 
 The idempotency result is the useful one: the two calls Phoenix makes have **opposite**
 duplicate semantics. `receipt` is a free-text label, so a retried `orders.create` bills
 twice; `reference_id` is a real server-side guard but its 400 arrives *after* the request
 left. That asymmetry is why dedupe lives in `src/core/audit.ts` on our side of the
 network call instead of being hoped for on theirs.
-
 
 ### What the numbers came out as
 
@@ -45,6 +46,7 @@ making **106 authorization attempts against A's 967 — an 89% reduction** at eq
 recovery count (458 vs 457). The honest headline is the cost side, not the revenue side.
 
 Two checks Phoenix **loses**, both reported in the README rather than dropped:
+
 - the perturbation sweep **flips to arm A at ×0.3 belief scale** (thin margin, ₹1,368, but the sign changes)
 - the **adversarial arm goes to naive** — zero out fatigue and issuer penalties and brute-force retrying is correct
 
@@ -54,12 +56,13 @@ case. That is the narrow, specific place the LLM classifier earns its bill.
 
 ### Deviations from this plan, and why
 
-| Planned | Shipped | Reason |
-|---|---|---|
-| Prisma + SQLite, 8 tables | **append-only JSONL** (`src/core/audit.ts`) | Prisma CLI 7.10.0 installed with a broken `execa` tree. Nothing here needs SQL: one process, no concurrent writers, and a file in append mode makes "append-only" structural instead of a convention. Two deps and a generate step deleted. |
-| SSE for the rescue push | **plain POST** | Every message in the rescue flow is client-initiated. There is no server push to carry, so SSE was transport for its own sake. Noted in the route. |
-| `IdempotencyStore` interface | one module, two functions | No interface with one implementation. `append()` returning `false` on a repeat key *is* the guarantee. |
-| Separate ablation/perturbation scripts | one runner | `run-arms.ts` prints all four sections; three fewer entry points to keep in sync. |
+| Planned                                | Shipped                                                | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prisma + SQLite, 8 tables              | **append-only JSONL** (`src/core/audit.ts`)    | Prisma CLI 7.10.0 installed with a broken`execa` tree. Nothing here needs SQL: one process, no concurrent writers, and a file in append mode makes "append-only" structural instead of a convention. Two deps and a generate step deleted.                                                                                                                                                                                                                                              |
+| SSE for the rescue push                | **plain POST**                                   | Every message in the rescue flow is client-initiated. There is no server push to carry, so SSE was transport for its own sake. Noted in the route.                                                                                                                                                                                                                                                                                                                                        |
+| `IdempotencyStore` interface         | one module, two functions                              | No interface with one implementation.`append()` returning `false` on a repeat key *is* the guarantee.                                                                                                                                                                                                                                                                                                                                                                               |
+| Separate ablation/perturbation scripts | one runner                                             | `run-arms.ts` prints all four sections; three fewer entry points to keep in sync.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Anthropic as the L1 classifier         | **Gemini 2.5 Flash** (`@ai-sdk/google@4.0.64`) | Whichever key the builder actually holds. The LLM sits behind one`generateObject` call returning a five-value zod enum, so the provider is a one-line swap and no float reaches the money math either way. `@ai-sdk/anthropic` uninstalled rather than left in `package.json` unused. `GEMINI_API_KEY` is accepted as an alias for `GOOGLE_GENERATIVE_AI_API_KEY`, because a key in the wrong variable name is the dullest possible way for arm D to silently degrade to arm C. |
 
 ### Bugs my own checks caught (kept here because they are the argument for the checks)
 
@@ -119,12 +122,12 @@ nothing."* **So the headroom is measurement discipline, not module count.**
 Every competitor — and Razorpay's default — acts *after* the failure. Phoenix moves the
 intervention **left** along the timeline:
 
-| Window | When | Action |
-|---|---|---|
-| **W0** in-session | t ≈ 0s | live downtime → consented method switch, no page reload |
-| **W1** pre-debit | t − 24h | merchant-side pre-flight before the debit burns 1 of only 4 attempts |
-| **W2** pre-expiry | t − 7d | card mandate → UPI Autopay migration |
-| **W3** post-failure | t + 1..3d | the ladder everyone builds — here it is the **last** resort |
+| Window                    | When      | Action                                                               |
+| ------------------------- | --------- | -------------------------------------------------------------------- |
+| **W0** in-session   | t ≈ 0s   | live downtime → consented method switch, no page reload             |
+| **W1** pre-debit    | t − 24h  | merchant-side pre-flight before the debit burns 1 of only 4 attempts |
+| **W2** pre-expiry   | t − 7d   | card mandate → UPI Autopay migration                                |
+| **W3** post-failure | t + 1..3d | the ladder everyone builds — here it is the**last** resort    |
 
 Falsifiable, and it has a real cost: W1/W2 fire on *predicted* failure, so they spend customer
 attention on accounts that would have paid anyway. **That wasted-notification rate is measured and
@@ -134,11 +137,11 @@ reported in the README**, not hidden.
 
 The single most important credibility decision. A reader never guesses what is real.
 
-| Tier | Meaning | Covers |
-|---|---|---|
-| **A — LIVE** | Real API, real network, response committed as a fixture | Razorpay test-mode execution, webhook HMAC verify, idempotency probe, one `active→pending→halted` walk, **WhatsApp outbound via Twilio** |
-| **B — SIM** | Deterministic seeded simulator, `seed 42`, reproducible | Baseline arms, EV pricing, LLM ablation, perturbation, What-If |
-| **C — STUB** | Built but not wired to a real provider; **named as such** | Bank TPS model (Razorpay downtime feed is real; a TPS predictor is not), WhatsApp inbound if the tunnel fails |
+| Tier                | Meaning                                                        | Covers                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A — LIVE** | Real API, real network, response committed as a fixture        | Razorpay test-mode execution, webhook HMAC verify, idempotency probe, one`active→pending→halted` walk, **WhatsApp outbound via Twilio** |
+| **B — SIM**  | Deterministic seeded simulator,`seed 42`, reproducible       | Baseline arms, EV pricing, LLM ablation, perturbation, What-If                                                                                    |
+| **C — STUB** | Built but not wired to a real provider;**named as such** | Bank TPS model (Razorpay downtime feed is real; a TPS predictor is not), WhatsApp inbound if the tunnel fails                                     |
 
 Tier B is not a fallback. Arms need N in the hundreds — nobody hand-clicks a dashboard 400 times.
 It is the correct instrument for a measured claim.
@@ -149,7 +152,7 @@ Checked, not assumed:
 
 - `node v22.22.3`, `npm 11.11.0`, `git 2.54.0`. **No** `gh`, `vercel`, `cloudflared`, `ngrok`, `lt`.
 - Installed and usable: `next@15.5.25`, `react@19.2.8`, `ai@7.0.93` (`generateObject` export
-  confirmed present), `@ai-sdk/anthropic@4.0.49`, `zod@4.5.4`, `decimal.js@10.6.0`, `recharts`,
+  confirmed present), `@ai-sdk/google@4.0.64`, `zod@4.5.4`, `decimal.js@10.6.0`, `recharts`,
   `lucide-react`, `tailwindcss@4.3.3`, `tsx`, `vitest@4.1.11`.
 - **TLS interception on this machine**: `graph.facebook.com` is re-signed by a Sophos CA → Node
   `fetch` dies with `SELF_SIGNED_CERT_IN_CHAIN`; `--use-system-ca` does not fix it.
@@ -166,14 +169,14 @@ Checked, not assumed:
 
 Each one buys time and loses nothing:
 
-| Brief | Plan | Why |
-|---|---|---|
-| WebSockets (`ws`) | **SSE** via `ReadableStream` route handler | Rescue is server→client push only; consent returns as a normal POST. Native `EventSource`, no custom server, works in App Router. |
-| Redis / Upstash idempotency | **`IdempotencyStore` interface**, SQLite-backed | Single process. Redis is infra for a claim the demo makes in-process. Interface keeps the swap to one file. |
-| PostgreSQL / Supabase | **SQLite** via Prisma | Zero provisioning, committable, deterministic. |
-| LangChain | **AI SDK `generateObject` + zod** | Already installed. LLM only classifies and words things. |
-| Framer Motion | **CSS transitions** | Not installed. The modal is one slide-in. |
-| Meta WhatsApp Cloud API | **Twilio WhatsApp sandbox** | TLS interception (above) + skips Business verification and template approval, neither of which completes today. |
+| Brief                       | Plan                                                    | Why                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| WebSockets (`ws`)         | **SSE** via `ReadableStream` route handler      | Rescue is server→client push only; consent returns as a normal POST. Native`EventSource`, no custom server, works in App Router. |
+| Redis / Upstash idempotency | **`IdempotencyStore` interface**, SQLite-backed | Single process. Redis is infra for a claim the demo makes in-process. Interface keeps the swap to one file.                         |
+| PostgreSQL / Supabase       | **SQLite** via Prisma                             | Zero provisioning, committable, deterministic.                                                                                      |
+| LangChain                   | **AI SDK `generateObject` + zod**               | Already installed. LLM only classifies and words things.                                                                            |
+| Framer Motion               | **CSS transitions**                               | Not installed. The modal is one slide-in.                                                                                           |
+| Meta WhatsApp Cloud API     | **Twilio WhatsApp sandbox**                       | TLS interception (above) + skips Business verification and template approval, neither of which completes today.                     |
 
 `razorpay` npm SDK deliberately **not** added — the live adapter is ~20 lines of `fetch`, and fewer
 deps is fewer failure modes.
@@ -309,14 +312,14 @@ already-parsed body — a real footgun that silently breaks on key ordering.
 **Nested arms**, each differing from the previous by exactly one component, so every delta is
 attributable:
 
-| Arm | What | Isolates |
-|---|---|---|
-| **0** | Do nothing | the zero line — most of a realistic batch is unrecoverable, so absolute figures are dominated by losses no policy avoids |
-| **A** | **Razorpay's documented default** — T+1/T+2/T+3 → `halted` + card email | a real baseline, not a strawman |
-| **B** | Rules only | — |
-| **C** | + EV pricing, table classifier | the EV layer |
-| **D** | + LLM classifier | **the LLM alone** |
-| **E** | + left-shift W0–W2 | **the thesis** |
+| Arm         | What                                                                              | Isolates                                                                                                                  |
+| ----------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **0** | Do nothing                                                                        | the zero line — most of a realistic batch is unrecoverable, so absolute figures are dominated by losses no policy avoids |
+| **A** | **Razorpay's documented default** — T+1/T+2/T+3 → `halted` + card email | a real baseline, not a strawman                                                                                           |
+| **B** | Rules only                                                                        | —                                                                                                                        |
+| **C** | + EV pricing, table classifier                                                    | the EV layer                                                                                                              |
+| **D** | + LLM classifier                                                                  | **the LLM alone**                                                                                                   |
+| **E** | + left-shift W0–W2                                                               | **the thesis**                                                                                                      |
 
 Reported per arm: net value vs arm 0, recovered count, **authorization attempts**, **customer
 contacts**, veto counts by rule, **under-proposal rate** (quit on something ground truth says was
@@ -359,17 +362,17 @@ than claiming an idempotency guarantee the API does not give.
 
 Step 0 is not optional — `package.json` is a bare stub today.
 
-| # | Step | Gate to pass |
-|---|---|---|
-| **0** | ✅ `package.json` (type/scripts, declare `vitest`+`dotenv`), `tsconfig.json`, Tailwind v4 postcss, `.gitignore` with `.env*` **before any key is pasted**, `.env.example` | `npm run typecheck` runs |
-| **1** | ✅ Seeded simulator, `decide()` core, append-only audit, **eval harness** (~~Prisma schema~~ → JSONL) | arms runnable before any UI exists |
-| **2** | ✅ Arms 0–E + ablation + perturbation + adversarial → committed results file | `npm run eval` reproduces byte-for-byte |
-| **3** | ⏳ Tier A: key wiring, poller, HMAC verify, idempotency probe, one `Charge as Failure` walk → fixtures | needs `rzp_test_` keys |
-| **4** | ⏳ **WhatsApp outbound live** (Twilio `join` opt-in → real message + real payment link) | needs `TWILIO_*` + demo phone |
-| **5** | ✅ Rescue surface (~~SSE~~ → POST) + live downtime join | card names the real degraded instrument |
-| **6** | ✅ Dashboard: arms table, ablation, sweep, What-If form, audit viewer | — |
-| **7** | ⏳ **WhatsApp inbound** two-way agent via `npx localtunnel` — route written, tunnel not attempted | — |
-| **8** | ✅ README with per-number tier labels, honest limits | — |
+| #           | Step                                                                                                                                                                                         | Gate to pass                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **0** | ✅`package.json` (type/scripts, declare `vitest`+`dotenv`), `tsconfig.json`, Tailwind v4 postcss, `.gitignore` with `.env*` **before any key is pasted**, `.env.example` | `npm run typecheck` runs                |
+| **1** | ✅ Seeded simulator,`decide()` core, append-only audit, **eval harness** (~~Prisma schema~~ → JSONL)                                                                               | arms runnable before any UI exists        |
+| **2** | ✅ Arms 0–E + ablation + perturbation + adversarial → committed results file                                                                                                               | `npm run eval` reproduces byte-for-byte |
+| **3** | ⏳ Tier A: key wiring, poller, HMAC verify, idempotency probe, one`Charge as Failure` walk → fixtures                                                                                     | needs`rzp_test_` keys                   |
+| **4** | ⏳**WhatsApp outbound live** (Twilio `join` opt-in → real message + real payment link)                                                                                              | needs`TWILIO_*` + demo phone            |
+| **5** | ✅ Rescue surface (~~SSE~~ → POST) + live downtime join                                                                                                                                    | card names the real degraded instrument   |
+| **6** | ✅ Dashboard: arms table, ablation, sweep, What-If form, audit viewer                                                                                                                        | —                                        |
+| **7** | ⏳**WhatsApp inbound** two-way agent via `npx localtunnel` — route written, tunnel not attempted                                                                                    | —                                        |
+| **8** | ✅ README with per-number tier labels, honest limits                                                                                                                                         | —                                        |
 
 **Triage rule:** if the clock runs out it runs out at 6/7 — **never before 2**, because steps 1–2
 *are* the submission. Step 4 deliberately precedes step 5: a real message on a real phone is worth
@@ -424,6 +427,3 @@ Reviewed: [payrecover-ai](https://github.com/IMRIKRUPA/payrecover-ai),
 [Razorrecover-ai](https://github.com/heyyaman64/Razorrecover-ai),
 [RecoveryLoop-AI](https://github.com/mahimasisodiya049-blip/RecoveryLoop-AI),
 [razorpay-revenue-recovery](https://github.com/VachepalliDevishReddy/razorpay-revenue-recovery).
-
-
-

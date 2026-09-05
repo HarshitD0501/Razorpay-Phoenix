@@ -68,8 +68,8 @@ forever. Arm A does exactly that, and pays for it in issuer-visible declines. Th
 cost columns are what make the net column mean anything, which is why they are in
 the table rather than in an appendix.
 
-**Arm D equals arm C** in this run because no `ANTHROPIC_API_KEY` was set, so the
-LLM classifier fell back to the lookup table on every case. That is not a
+**Arm D equals arm C** in this run because no `GOOGLE_GENERATIVE_AI_API_KEY` was set,
+so the LLM classifier fell back to the lookup table on every case. That is not a
 favourable rounding — it is the run reporting that the LLM was not exercised. Run
 `npm run eval -- --llm` with a key to separate them.
 

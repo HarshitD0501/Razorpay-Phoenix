@@ -77,6 +77,20 @@ const LlmOut = z.object({
   confident: z.boolean(),
 });
 
+export const LLM_MODEL = "gemini-2.5-flash";
+
+/**
+ * The AI SDK's Google provider reads GOOGLE_GENERATIVE_AI_API_KEY. GEMINI_API_KEY
+ * is what Google's own console and docs hand you, so accept either and normalise —
+ * a key in the wrong variable name is the least interesting way for arm D to
+ * silently degrade to arm C.
+ */
+export function geminiKey(): string | undefined {
+  const k = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+  if (k) process.env.GOOGLE_GENERATIVE_AI_API_KEY = k;
+  return k;
+}
+
 /**
  * Arm D's classifier. No key, no model, low confidence, or a schema violation
  * -> table, with the cause recorded so the ablation can report WHY, not just
@@ -84,16 +98,16 @@ const LlmOut = z.object({
  */
 export async function classifyByLlm(e: FailureEnvelope): Promise<Classification> {
   const table = classifyByTable(e);
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { ...table, fellBackBecause: "no ANTHROPIC_API_KEY" };
+  if (!geminiKey()) {
+    return { ...table, fellBackBecause: "no GOOGLE_GENERATIVE_AI_API_KEY" };
   }
   try {
-    const [{ generateObject }, { anthropic }] = await Promise.all([
+    const [{ generateObject }, { google }] = await Promise.all([
       import("ai"),
-      import("@ai-sdk/anthropic"),
+      import("@ai-sdk/google"),
     ]);
     const { object } = await generateObject({
-      model: anthropic("claude-sonnet-5"),
+      model: google(LLM_MODEL),
       schema: LlmOut,
       system:
         "You triage Razorpay payment failures. Output a recoverability bucket only — " +
