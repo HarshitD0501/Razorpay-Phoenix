@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 import { append } from "@/core/audit";
 import { classifyByTable } from "@/core/classify";
 import { decide } from "@/core/decide";
+import { readJson } from "@/core/req";
 import { DEFAULTS } from "@/eval/arms";
 import { downtimes, type Downtime } from "@/live/razorpay";
 import type { FailureEnvelope } from "@/core/types";
@@ -34,7 +35,13 @@ const ALT: Record<string, { label: string; method: string }[]> = {
 };
 
 export async function POST(req: Request) {
-  const env = (await req.json()) as FailureEnvelope & { amountRupees?: number };
+  const env = await readJson<FailureEnvelope & { amountRupees?: number }>(req);
+  if (env instanceof Response) return env;
+  if (!env.paymentId) {
+    // paymentId is the idempotency key and the consent token; without it the
+    // ledger cannot dedupe and /api/consent has nothing to verify against.
+    return NextResponse.json({ error: "paymentId is required" }, { status: 400 });
+  }
 
   // Live join. No keys -> tier drops to B and the response says so, rather than
   // implying a feed we did not read.

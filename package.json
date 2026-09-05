@@ -10,7 +10,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "eval": "tsx src/eval/run-arms.ts",
+    "eval": "tsx --env-file-if-exists=.env src/eval/run-arms.ts",
     "poll": "tsx --env-file=.env scripts/poll.ts",
     "replay": "tsx --env-file=.env scripts/replay-webhook.ts",
     "probe:idempotency": "tsx --env-file=.env scripts/probe-idempotency.ts",

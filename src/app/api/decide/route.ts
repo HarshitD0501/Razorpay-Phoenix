@@ -7,12 +7,13 @@
 import { NextResponse } from "next/server";
 import { classifyByTable } from "@/core/classify";
 import { decide } from "@/core/decide";
+import { readJson } from "@/core/req";
 import { DEFAULTS } from "@/eval/arms";
 import { WINDOWS, type Window } from "@/core/types";
 import type { FailureEnvelope } from "@/core/types";
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as {
+  const body = await readJson<{
     envelope: FailureEnvelope;
     invoiceRupees?: number;
     mandateAmountRupees?: number;
@@ -21,7 +22,11 @@ export async function POST(req: Request) {
     consentWhatsapp?: boolean;
     retriesUsed?: number;
     discountCeilingRupees?: number;
-  };
+  }>(req);
+  if (body instanceof Response) return body;
+  if (!body.envelope || typeof body.envelope !== "object") {
+    return NextResponse.json({ error: "envelope is required" }, { status: 400 });
+  }
 
   const cls = classifyByTable(body.envelope);
   const invoice = body.invoiceRupees ?? 499;

@@ -77,7 +77,14 @@ const LlmOut = z.object({
   confident: z.boolean(),
 });
 
-export const LLM_MODEL = "gemini-2.5-flash";
+/**
+ * Gemini 2.5 Flash is the natural choice and is NOT usable here: the API returns
+ * "no longer available to new users" for 2.5-flash and 2.5-flash-lite on a freshly
+ * issued key, and `gemini-flash-latest` was erroring at the time of the run. 3.5
+ * flash is the nearest working equivalent. Pinned to a concrete id rather than the
+ * `-latest` alias so a committed results file says exactly what produced it.
+ */
+export const LLM_MODEL = "gemini-3.5-flash";
 
 /**
  * The AI SDK's Google provider reads GOOGLE_GENERATIVE_AI_API_KEY. GEMINI_API_KEY

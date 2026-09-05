@@ -25,13 +25,36 @@ const withLlm = process.argv.includes("--llm") && !!geminiKey();
 
 const cases = generate(N, SEED);
 
+/**
+ * One LLM call per case, shared by arm D, arm E and the recall table. Those are
+ * three consumers of the same answer, not three bills — and a sequential 3x600
+ * run at Gemini's flash latency is hours, which is how an ablation quietly stops
+ * being run at all. Bounded concurrency; classifyByLlm never throws, it falls
+ * back to the table and records why, so a failed call degrades one case.
+ */
+const llmCache = new Map<string, Awaited<ReturnType<typeof classifyByLlm>>>();
+async function prefetchLlm(concurrency = 8) {
+  const queue = [...cases];
+  let done = 0;
+  await Promise.all(
+    Array.from({ length: concurrency }, async () => {
+      for (let c = queue.pop(); c; c = queue.pop()) {
+        llmCache.set(c.envelope.paymentId, await classifyByLlm(c.envelope));
+        if (++done % 25 === 0) process.stderr.write(`  ${LLM_MODEL} ${done}/${cases.length}\r`);
+      }
+    }),
+  );
+  process.stderr.write(`  ${LLM_MODEL} ${done}/${cases.length}\n`);
+}
+if (withLlm) await prefetchLlm();
+
 /** Arm D's classifier. Without --llm it is the table, and the run says so. */
 const llmClassifier = async (c: (typeof cases)[number]) => {
   if (!withLlm) {
     const r = classifyByTable(c.envelope);
     return { bucket: r.bucket, fellBack: true, llm: false };
   }
-  const r = await classifyByLlm(c.envelope);
+  const r = llmCache.get(c.envelope.paymentId) ?? (await classifyByLlm(c.envelope));
   return { bucket: r.bucket, fellBack: r.source === "table", llm: r.source === "llm" };
 };
 
@@ -83,27 +106,35 @@ table(results);
 // Aggregate recall hides where a model earns its place, so it is never reported
 // on its own.
 const classes = ["clean", "context", "contradictory", "null_reason"] as const;
-const recall: Record<string, { table: string; llm: string; n: number }> = {};
+const recall: Record<string, { table: string; llm: string; llmFellBack: number; n: number }> = {};
 for (const cls of classes) {
   const subset = cases.filter((c) => c.perturbation === cls);
   let tHits = 0;
   let lHits = 0;
+  let lFell = 0;
   for (const c of subset) {
     if (classifyByTable(c.envelope).bucket === (c.trueBucket as Bucket)) tHits++;
     if (withLlm) {
-      const r = await classifyByLlm(c.envelope);
+      const r = llmCache.get(c.envelope.paymentId)!;
       if (r.bucket === (c.trueBucket as Bucket)) lHits++;
+      // A fallback is the table's answer wearing the LLM's arm, so count it:
+      // otherwise a broken key reads as "the LLM matched the table exactly".
+      if (r.source === "table") lFell++;
     }
   }
   recall[cls] = {
     n: subset.length,
     table: subset.length ? ((tHits / subset.length) * 100).toFixed(1) + "%" : "-",
     llm: withLlm && subset.length ? ((lHits / subset.length) * 100).toFixed(1) + "%" : "not run",
+    llmFellBack: lFell,
   };
 }
 console.log("\nCLASSIFIER RECALL by perturbation class");
 for (const [k, v] of Object.entries(recall)) {
-  console.log(`  ${k.padEnd(14)} n=${String(v.n).padStart(4)}  table ${v.table.padStart(6)}  llm ${v.llm}`);
+  const fell = withLlm ? `  (llm fell back on ${v.llmFellBack})` : "";
+  console.log(
+    `  ${k.padEnd(14)} n=${String(v.n).padStart(4)}  table ${v.table.padStart(6)}  llm ${v.llm}${fell}`,
+  );
 }
 
 // ---- anti-circularity: does the conclusion survive wrong beliefs? --------
@@ -145,6 +176,9 @@ const out = {
 };
 mkdirSync("results", { recursive: true });
 // generatedAt is excluded from the byte-reproducibility claim; everything else
-// is a pure function of (n, seed).
-writeFileSync("results/arms.json", JSON.stringify(out, null, 2) + "\n");
-console.log("\nwrote results/arms.json");
+// is a pure function of (n, seed) — for the table run. The --llm run goes to its
+// own file: it costs an API key to reproduce and a model can drift under a pinned
+// id, so it must not overwrite the one number anybody can regenerate offline.
+const outFile = withLlm ? "results/arms-llm.json" : "results/arms.json";
+writeFileSync(outFile, JSON.stringify(out, null, 2) + "\n");
+console.log(`\nwrote ${outFile}`);
