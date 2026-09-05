@@ -18,7 +18,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jakarta.variable} scroll-smooth`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jakarta.variable} scroll-smooth`}
+    >
       <head>
         {/* Before first paint, so the theme never flashes the wrong way. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
