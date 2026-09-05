@@ -68,10 +68,12 @@ forever. Arm A does exactly that, and pays for it in issuer-visible declines. Th
 cost columns are what make the net column mean anything, which is why they are in
 the table rather than in an appendix.
 
-**Arm D equals arm C** in this run because no `GOOGLE_GENERATIVE_AI_API_KEY` was set,
-so the LLM classifier fell back to the lookup table on every case. That is not a
-favourable rounding — it is the run reporting that the LLM was not exercised. Run
-`npm run eval -- --llm` with a key to separate them.
+**Arm D equals arm C** because the LLM classifier never got to answer. Gemini's free
+tier refused 590 of 600 calls on quota (10 more failed for other reasons), and
+`classifyByLlm` falls back to the lookup table per failed call — so arm D is arm C
+with a different label, and the run says so instead of reporting one number twice.
+`results/arms-llm.json` carries the per-cause tally that proves it. See honest limit
+5; `npm run eval -- --llm` on a paid key separates them.
 
 **Arm B recovers less than arm A** and makes zero authorization attempts. Rules
 plus a gate, with no EV pricing, is too conservative: it never retries, so it
@@ -84,10 +86,14 @@ place.
 
 | payload class | n | table classifier | LLM |
 |---|--:|--:|--:|
-| clean | 297 | 100.0% | not run |
-| context-dependent (signal only in prose) | 101 | 50.5% | not run |
-| contradictory (stale reason code, truthful source/step) | 103 | **0.0%** | not run |
-| null reason, source+step intact | 99 | 59.6% | not run |
+| clean | 297 | 100.0% | quota-blocked |
+| context-dependent (signal only in prose) | 101 | 50.5% | quota-blocked |
+| contradictory (stale reason code, truthful source/step) | 103 | **0.0%** | quota-blocked |
+| null reason, source+step intact | 99 | 59.6% | quota-blocked |
+
+The LLM column is empty for a stated reason rather than left ambiguous: the free-tier
+quota refused 590 of 600 calls, so every case fell back to the table and an "LLM" row
+would have been the table's row twice. Honest limit 5 has the detail.
 
 Clean cases are 100% **by construction** — the table maps reason codes and clean
 cases carry a truthful reason code. The other three rows are the honest test, and
@@ -287,8 +293,23 @@ Drafted before the numbers existed, so it could not be tuned to flatter them.
    cost tables disagree. That guard reduces circularity; it does not eliminate it.
 4. **Clean-payload classifier recall is 100% by construction** and should be read
    as such. Only the context / contradictory / null-reason rows carry information.
-5. **Arm D did not exercise the LLM** in the committed run (no API key), so C and D
-   are identical. The run says so rather than quietly reporting one number twice.
+5. **Arm D did not exercise the LLM, and the reason is a quota wall, not a missing
+   key.** Gemini's free tier caps `generate_content_free_tier_requests` hard enough
+   that a 600-case ablation cannot be funded on it: the committed
+   `results/arms-llm.json` records **590 cases lost to quota and 10 to other errors**,
+   so the LLM classified nothing and arms C and D are identical. That file is
+   evidence of the wall, not an ablation — read `llmFallbackCauses` in it.
+   `classifyByLlm` degrades a failed call to the lookup table *by design*, which is
+   the right production behaviour and a measurement trap: the first run of this
+   reported "LLM recall == table recall" on all four payload classes and looked like
+   a tidy negative result. The harness now paces its calls, re-sweeps only the cases
+   a quota error stole at half the rate each pass, aggregates the fallback *cause*,
+   and prints `!! N% of cases fell back to the table. Arms D/E are NOT a clean LLM
+   measurement in this run.` A paced partial run did separate them in the direction
+   predicted — the contradictory class, where the table is 0.0% by construction, was
+   the only class the model improved materially — but it is not committed here
+   because it was not a clean run, and an uncommitted number is not a number.
+   `npm run eval -- --llm` on a paid key produces the real row.
 6. **Left-shift spends notifications on accounts that would have paid anyway** — 52
    of them in arm E. That is the thesis's cost and it is a column, not a footnote.
 7. **Bank health is Razorpay's downtime feed, not a TPS model.** Test mode usually

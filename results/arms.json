@@ -4,7 +4,7 @@
     "seed": 42,
     "tier": "B",
     "classifier": "table",
-    "generatedAt": "2026-09-05T13:47:30.398Z"
+    "generatedAt": "2026-09-05T15:19:46.512Z"
   },
   "arms": [
     {
@@ -181,6 +181,7 @@
       "llmFellBack": 0
     }
   },
+  "llmFallbackCauses": {},
   "perturbationSweep": [
     {
       "scale": 0.3,

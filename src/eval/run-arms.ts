@@ -29,22 +29,81 @@ const cases = generate(N, SEED);
  * One LLM call per case, shared by arm D, arm E and the recall table. Those are
  * three consumers of the same answer, not three bills — and a sequential 3x600
  * run at Gemini's flash latency is hours, which is how an ablation quietly stops
- * being run at all. Bounded concurrency; classifyByLlm never throws, it falls
- * back to the table and records why, so a failed call degrades one case.
+ * being run at all. classifyByLlm never throws: it falls back to the table and
+ * records why, so a failed call degrades exactly one case.
  */
 const llmCache = new Map<string, Awaited<ReturnType<typeof classifyByLlm>>>();
-async function prefetchLlm(concurrency = 8) {
-  const queue = [...cases];
+
+/**
+ * classifyByLlm turns a 429 into a per-case table fallback, so hammering a free-tier
+ * quota does not fail loudly — it quietly produces an arm D that IS arm C with a
+ * different label. A 600-case run at concurrency 8 fell back on 593/600 for exactly
+ * that reason, and 60/min still lost ~55%.
+ *
+ * Rather than guess the undocumented free-tier ceiling, converge on it: sweep, then
+ * re-sweep ONLY the cases a quota error stole, each pass at half the rate. A quota
+ * miss is infrastructure, not model behaviour, so retrying it is not cherry-picking —
+ * whereas keeping it would report the table's answer as the LLM's.
+ * ponytail: fixed-rate cursor, no token bucket. Raise START_RPM with a paid key.
+ */
+const START_RPM = 60;
+let gapMs = 60_000 / START_RPM;
+let nextAt = 0;
+async function slot() {
+  const now = Date.now();
+  const at = Math.max(now, nextAt);
+  nextAt = at + gapMs;
+  if (at > now) await new Promise((r) => setTimeout(r, at - now));
+}
+
+/** Why the LLM fell back, coarsely — a count with no cause is how a quota wall reads as a model finding. */
+const fallbackCauses = new Map<string, number>();
+function causeOf(why: string | undefined) {
+  if (!why) return null;
+  if (/quota|rate|429|exceeded/i.test(why)) return "quota/rate-limit";
+  if (/not confident/i.test(why)) return "model not confident";
+  if (/no GOOGLE|no key/i.test(why)) return "no key";
+  return "other error";
+}
+
+const started = Date.now();
+async function sweepBatch(batch: typeof cases, concurrency = 4) {
+  const queue = [...batch];
   let done = 0;
   await Promise.all(
     Array.from({ length: concurrency }, async () => {
       for (let c = queue.pop(); c; c = queue.pop()) {
+        await slot();
         llmCache.set(c.envelope.paymentId, await classifyByLlm(c.envelope));
-        if (++done % 25 === 0) process.stderr.write(`  ${LLM_MODEL} ${done}/${cases.length}\r`);
+        if (++done % 25 === 0 || done === batch.length) {
+          process.stderr.write(
+            `  ${LLM_MODEL} ${done}/${batch.length} @${Math.round(60_000 / gapMs)}/min` +
+              `  ${((Date.now() - started) / 60_000).toFixed(1)}m   \r`,
+          );
+        }
       }
     }),
   );
-  process.stderr.write(`  ${LLM_MODEL} ${done}/${cases.length}\n`);
+}
+
+async function prefetchLlm() {
+  let batch = cases;
+  for (let pass = 1; pass <= 4 && batch.length; pass++) {
+    await sweepBatch(batch);
+    batch = batch.filter(
+      (c) => causeOf(llmCache.get(c.envelope.paymentId)?.fellBackBecause) === "quota/rate-limit",
+    );
+    process.stderr.write(
+      `\n  pass ${pass}: ${batch.length} of ${cases.length} still quota-blocked\n`,
+    );
+    gapMs *= 2;
+  }
+  // Tally causes once, after the last pass, so a retried case is counted by how it
+  // finally landed rather than once per attempt.
+  for (const c of cases) {
+    const cause = causeOf(llmCache.get(c.envelope.paymentId)?.fellBackBecause);
+    if (cause) fallbackCauses.set(cause, (fallbackCauses.get(cause) ?? 0) + 1);
+  }
 }
 if (withLlm) await prefetchLlm();
 
@@ -136,6 +195,24 @@ for (const [k, v] of Object.entries(recall)) {
     `  ${k.padEnd(14)} n=${String(v.n).padStart(4)}  table ${v.table.padStart(6)}  llm ${v.llm}${fell}`,
   );
 }
+// A fallback COUNT with no CAUSE is how an infrastructure failure gets read as a
+// model finding: a rate-limited run reports "llm recall == table recall" and looks
+// like a tidy negative result. So name the cause, and if the run was mostly
+// fallbacks, say outright that the ablation measured nothing.
+if (withLlm) {
+  const causes = [...fallbackCauses].sort((a, b) => b[1] - a[1]);
+  const fellTotal = causes.reduce((s, [, v]) => s + v, 0);
+  console.log(
+    `  fallback causes: ${causes.map(([k, v]) => `${k} ${v}`).join(", ") || "none"}` +
+      `  (${fellTotal}/${cases.length})`,
+  );
+  if (fellTotal > cases.length * 0.1) {
+    console.log(
+      `  !! ${((fellTotal / cases.length) * 100).toFixed(0)}% of cases fell back to the table.` +
+        ` Arms D/E are NOT a clean LLM measurement in this run.`,
+    );
+  }
+}
 
 // ---- anti-circularity: does the conclusion survive wrong beliefs? --------
 console.log("\nPERTURBATION SWEEP (agent's beliefs scaled; world untouched)");
@@ -171,6 +248,7 @@ const out = {
   },
   arms: results,
   recallByPerturbation: recall,
+  llmFallbackCauses: Object.fromEntries(fallbackCauses),
   perturbationSweep: sweep,
   adversarial: { eNet: advE.netRupees, aNet: advA.netRupees, winner: advWinner },
 };

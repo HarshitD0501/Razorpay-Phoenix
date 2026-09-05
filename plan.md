@@ -93,6 +93,25 @@ case. That is the narrow, specific place the LLM classifier earns its bill.
    ("cheaper", "cancelled") still land. Also added "too much", which surfaced the moment
    I tested a realistic phrasing: it is the commonest price objection and carries no
    price keyword at all.
+6. **A rate limit was about to be reported as an LLM finding.** The first full
+   `--llm` run came back with arm D *identical* to arm C and LLM recall *identical* to the
+   table's on all four perturbation classes. That reads as a tidy negative result — "the
+   LLM adds nothing" — and it was false. `classifyByLlm` degrades a failed call to the
+   table per-case, by design, so 600 calls at concurrency 8 against a free tier quietly
+   fell back on **593/600** and reported the table's answers wearing the LLM's label. Two
+   fixes, both about the measurement rather than the model: the harness now **paces** its
+   calls and re-sweeps only the cases a quota error stole, at half the rate each pass; and
+   it **aggregates the fallback cause** and prints `!! N% of cases fell back to the table.
+   Arms D/E are NOT a clean LLM measurement in this run.` A fallback count with no cause
+   is how infrastructure failure disguises itself as evidence.
+7. **The What-If form accepted knobs that produce authoritative nonsense.** `retryCap:
+   "abc"` makes every cap comparison false, and `discountCeilingRupees: -5` prices a
+   concession below zero; neither crashes, so the endpoint returned a full set of
+   plausible-looking rupee figures at 200 and echoed the garbage back. On a submission
+   whose whole argument is honest numbers, a dashboard that renders those is worse than one
+   that 400s. Each knob now has a declared plausible range and out-of-range values are
+   **rejected, not clamped** — a merchant who typed 1e9 should see it refused rather than
+   silently corrected into a number they will quote later.
 
 ---
 
@@ -149,8 +168,11 @@ Checked, not assumed:
 
 - `node v22.22.3`, `npm 11.11.0`, `git 2.54.0`. **No** `gh`, `vercel`, `cloudflared`, `ngrok`, `lt`.
 - Installed and usable: `next@15.5.25`, `react@19.2.8`, `ai@7.0.93` (`generateObject` export
-  confirmed present), `@ai-sdk/anthropic@4.0.49`, `zod@4.5.4`, `decimal.js@10.6.0`, `recharts`,
-  `lucide-react`, `tailwindcss@4.3.3`, `tsx`, `vitest@4.1.11`.
+  confirmed present), `zod@4.5.4`, `decimal.js@10.6.0`, `recharts`,
+  `lucide-react`, `tailwindcss@4.3.3`, `tsx`, `vitest@4.1.11`. `@ai-sdk/anthropic@4.0.49` was
+  present at survey time and has since been **removed** in favour of `@ai-sdk/google@4.0.64` —
+  the key I actually hold is a Gemini key, so an Anthropic provider was a dependency for a
+  request that could never be made.
 - **TLS interception on this machine**: `graph.facebook.com` is re-signed by a Sophos CA → Node
   `fetch` dies with `SELF_SIGNED_CERT_IN_CHAIN`; `--use-system-ca` does not fix it.
   `api.twilio.com` (DigiCert) and `api.razorpay.com` (RapidSSL) both return a clean `401`.
@@ -174,6 +196,7 @@ Each one buys time and loses nothing:
 | LangChain                   | **AI SDK `generateObject` + zod**               | Already installed. LLM only classifies and words things.                                                                            |
 | Framer Motion               | **CSS transitions**                               | Not installed. The modal is one slide-in.                                                                                           |
 | Meta WhatsApp Cloud API     | **Twilio WhatsApp sandbox**                       | TLS interception (above) + skips Business verification and template approval, neither of which completes today.                     |
+| Claude (`@ai-sdk/anthropic`) | **Gemini (`@ai-sdk/google`)**                    | The key I hold is a Gemini key. Two forced sub-deviations, both verified against the live API rather than assumed: **Gemini 2.5 Flash is unavailable** — the API answers "no longer available to new users" for `gemini-2.5-flash` and `-lite` on a freshly issued key — and `gemini-3.5-flash`'s free tier is capped low enough that a 600-case ablation cannot be funded on it, so the pinned id is `gemini-3.5-flash-lite`, the model that can actually be run 600 times on a free key. `-lite` is the weaker classifier and that cost stays in the reported recall. |
 
 `razorpay` npm SDK deliberately **not** added — the live adapter is ~20 lines of `fetch`, and fewer
 deps is fewer failure modes.

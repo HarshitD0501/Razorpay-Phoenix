@@ -4,7 +4,7 @@
     "seed": 42,
     "tier": "B",
     "classifier": "gemini-3.5-flash",
-    "generatedAt": "2026-09-05T13:55:52.672Z"
+    "generatedAt": "2026-09-05T15:26:06.060Z"
   },
   "arms": [
     {
@@ -118,8 +118,8 @@
         "reschedule_offer": 954,
         "retry_charge": 145
       },
-      "llmCalls": 13,
-      "llmFallbacks": 1258
+      "llmCalls": 0,
+      "llmFallbacks": 1271
     },
     {
       "arm": "E",
@@ -151,8 +151,8 @@
         "wait": 5,
         "notify_email": 10
       },
-      "llmCalls": 9,
-      "llmFallbacks": 1144
+      "llmCalls": 0,
+      "llmFallbacks": 1153
     }
   ],
   "recallByPerturbation": {
@@ -160,13 +160,13 @@
       "n": 297,
       "table": "100.0%",
       "llm": "100.0%",
-      "llmFellBack": 292
+      "llmFellBack": 297
     },
     "context": {
       "n": 101,
       "table": "50.5%",
       "llm": "50.5%",
-      "llmFellBack": 99
+      "llmFellBack": 101
     },
     "contradictory": {
       "n": 103,
@@ -180,6 +180,10 @@
       "llm": "59.6%",
       "llmFellBack": 99
     }
+  },
+  "llmFallbackCauses": {
+    "quota/rate-limit": 590,
+    "other error": 10
   },
   "perturbationSweep": [
     {

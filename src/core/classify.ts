@@ -78,13 +78,26 @@ const LlmOut = z.object({
 });
 
 /**
- * Gemini 2.5 Flash is the natural choice and is NOT usable here: the API returns
- * "no longer available to new users" for 2.5-flash and 2.5-flash-lite on a freshly
- * issued key, and `gemini-flash-latest` was erroring at the time of the run. 3.5
- * flash is the nearest working equivalent. Pinned to a concrete id rather than the
- * `-latest` alias so a committed results file says exactly what produced it.
+ * Two constraints picked this model, both verified against the live API rather than
+ * assumed:
+ *
+ *  1. Gemini 2.5 Flash — the natural choice — is NOT usable: the API answers
+ *     "no longer available to new users" for 2.5-flash and 2.5-flash-lite on a
+ *     freshly issued key.
+ *  2. gemini-3.5-flash works, but its free tier allows only 20 requests
+ *     (`generate_content_free_tier_requests, limit: 20`). A 600-case ablation
+ *     exhausts that in seconds, and because a 429 degrades to the table per-case,
+ *     the run does not fail — it silently returns an arm D that IS arm C. That is
+ *     precisely the measurement lie this repo is built to avoid, so the ablation
+ *     pins the model it can actually run 600 times on a free key.
+ *
+ * -lite is the weaker classifier: spot-checking found it call `card_expired`
+ * UNLIKELY where 3.5-flash says DEAD. That cost is left in the reported recall
+ * instead of being tuned away — a measured weakness beats an unmeasured strength.
+ * Pinned to a concrete id, not a `-latest` alias, so a committed results file says
+ * exactly what produced it.
  */
-export const LLM_MODEL = "gemini-3.5-flash";
+export const LLM_MODEL = "gemini-3.5-flash-lite";
 
 /**
  * The AI SDK's Google provider reads GOOGLE_GENERATIVE_AI_API_KEY. GEMINI_API_KEY
