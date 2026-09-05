@@ -1,0 +1,43 @@
+{
+  "name": "razorpay-phoenix",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Left-shifted revenue recovery. Razorpay AI Buildathon, Track 03.",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "eval": "tsx src/eval/run-arms.ts",
+    "poll": "tsx --env-file=.env scripts/poll.ts",
+    "replay": "tsx --env-file=.env scripts/replay-webhook.ts",
+    "probe:idempotency": "tsx --env-file=.env scripts/probe-idempotency.ts",
+    "probe:downtime": "tsx --env-file=.env scripts/probe-downtime.ts",
+    "whatsapp:send": "tsx --env-file=.env scripts/send-whatsapp.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "4.0.49",
+    "ai": "7.0.93",
+    "decimal.js": "10.6.0",
+    "lucide-react": "1.41.0",
+    "next": "15.5.25",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "recharts": "3.10.1",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.4.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "dotenv": "17.4.2",
+    "postcss": "8.5.28",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

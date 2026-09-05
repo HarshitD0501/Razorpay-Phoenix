@@ -1,0 +1,19 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+
+*.db
+*.db-journal
+
+# runtime audit ledger — regenerated, not evidence
+data/
+
+.DS_Store
+*.log

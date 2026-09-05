@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #0b0d12;
+  --paper: #f7f7f5;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-feature-settings: "tnum" 1;
+}
+
+/* The rescue card slide-in. One transition — Framer Motion is not installed and
+   is not needed for this. */
+.slide-in {
+  animation: slide-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide-in {
+    animation: none;
+  }
+}

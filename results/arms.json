@@ -1,0 +1,217 @@
+{
+  "meta": {
+    "n": 600,
+    "seed": 42,
+    "tier": "B",
+    "classifier": "table",
+    "generatedAt": "2026-09-05T10:30:33.815Z"
+  },
+  "arms": [
+    {
+      "arm": "0",
+      "label": "do nothing",
+      "recoveredCount": 57,
+      "recoveredRupees": "145070",
+      "costRupees": "0",
+      "netRupees": "145070",
+      "netVsArm0": "0",
+      "authAttempts": 0,
+      "customerContacts": 0,
+      "wastedNotifications": 0,
+      "underProposals": 0,
+      "vetoesByRule": {},
+      "actionCounts": {},
+      "llmCalls": 0,
+      "llmFallbacks": 0
+    },
+    {
+      "arm": "A",
+      "label": "Razorpay default (T+1/2/3 -> halted)",
+      "recoveredCount": 457,
+      "recoveredRupees": "1197930",
+      "costRupees": "18953",
+      "netRupees": "1178977",
+      "netVsArm0": "1033907",
+      "authAttempts": 967,
+      "customerContacts": 145,
+      "wastedNotifications": 1,
+      "underProposals": 5,
+      "vetoesByRule": {},
+      "actionCounts": {
+        "retry_charge": 967,
+        "notify_email": 145
+      },
+      "llmCalls": 0,
+      "llmFallbacks": 0
+    },
+    {
+      "arm": "B",
+      "label": "rules + gate, no EV",
+      "recoveredCount": 435,
+      "recoveredRupees": "1123800",
+      "costRupees": "50556",
+      "netRupees": "1073244",
+      "netVsArm0": "928174",
+      "authAttempts": 0,
+      "customerContacts": 1007,
+      "wastedNotifications": 57,
+      "underProposals": 0,
+      "vetoesByRule": {
+        "discount_ceiling": 656,
+        "contact_cap": 165,
+        "retry_into_degraded_rail": 34,
+        "no_whatsapp_consent": 394
+      },
+      "actionCounts": {
+        "reschedule_offer": 656,
+        "discount_offer": 351
+      },
+      "llmCalls": 0,
+      "llmFallbacks": 0
+    },
+    {
+      "arm": "C",
+      "label": "+ EV pricing (table classifier)",
+      "recoveredCount": 428,
+      "recoveredRupees": "1117690",
+      "costRupees": "13571",
+      "netRupees": "1104119",
+      "netVsArm0": "959049",
+      "authAttempts": 145,
+      "customerContacts": 954,
+      "wastedNotifications": 57,
+      "underProposals": 3,
+      "vetoesByRule": {
+        "discount_ceiling": 788,
+        "retry_cap_exhausted": 48,
+        "retry_into_degraded_rail": 34,
+        "contact_cap": 128,
+        "no_whatsapp_consent": 443
+      },
+      "actionCounts": {
+        "reschedule_offer": 954,
+        "retry_charge": 145
+      },
+      "llmCalls": 0,
+      "llmFallbacks": 0
+    },
+    {
+      "arm": "D",
+      "label": "+ LLM classifier",
+      "recoveredCount": 428,
+      "recoveredRupees": "1117690",
+      "costRupees": "13571",
+      "netRupees": "1104119",
+      "netVsArm0": "959049",
+      "authAttempts": 145,
+      "customerContacts": 954,
+      "wastedNotifications": 57,
+      "underProposals": 3,
+      "vetoesByRule": {
+        "discount_ceiling": 788,
+        "retry_cap_exhausted": 48,
+        "retry_into_degraded_rail": 34,
+        "contact_cap": 128,
+        "no_whatsapp_consent": 443
+      },
+      "actionCounts": {
+        "reschedule_offer": 954,
+        "retry_charge": 145
+      },
+      "llmCalls": 0,
+      "llmFallbacks": 1271
+    },
+    {
+      "arm": "E",
+      "label": "+ left-shift W0-W2",
+      "recoveredCount": 458,
+      "recoveredRupees": "1201880",
+      "costRupees": "10972",
+      "netRupees": "1190908",
+      "netVsArm0": "1045838",
+      "authAttempts": 106,
+      "customerContacts": 822,
+      "wastedNotifications": 52,
+      "underProposals": 3,
+      "vetoesByRule": {
+        "discount_ceiling": 522,
+        "contact_cap": 107,
+        "upi_autopay_ceiling": 91,
+        "no_whatsapp_consent": 331,
+        "retry_cap_exhausted": 35,
+        "retry_into_degraded_rail": 6
+      },
+      "actionCounts": {
+        "reschedule_offer": 615,
+        "mandate_migrate": 120,
+        "rescue_offer": 78,
+        "preflight_notify": 52,
+        "notify_whatsapp": 25,
+        "retry_charge": 106,
+        "wait": 5,
+        "notify_email": 10
+      },
+      "llmCalls": 0,
+      "llmFallbacks": 1153
+    }
+  ],
+  "recallByPerturbation": {
+    "clean": {
+      "n": 297,
+      "table": "100.0%",
+      "llm": "not run"
+    },
+    "context": {
+      "n": 101,
+      "table": "50.5%",
+      "llm": "not run"
+    },
+    "contradictory": {
+      "n": 103,
+      "table": "0.0%",
+      "llm": "not run"
+    },
+    "null_reason": {
+      "n": 99,
+      "table": "59.6%",
+      "llm": "not run"
+    }
+  },
+  "perturbationSweep": [
+    {
+      "scale": 0.3,
+      "eNet": "1177609",
+      "aNet": "1178977",
+      "eWins": false
+    },
+    {
+      "scale": 0.5,
+      "eNet": "1184316",
+      "aNet": "1178977",
+      "eWins": true
+    },
+    {
+      "scale": 1,
+      "eNet": "1190908",
+      "aNet": "1178977",
+      "eWins": true
+    },
+    {
+      "scale": 2,
+      "eNet": "1216566",
+      "aNet": "1178977",
+      "eWins": true
+    },
+    {
+      "scale": 3,
+      "eNet": "1230984",
+      "aNet": "1178977",
+      "eWins": true
+    }
+  ],
+  "adversarial": {
+    "eNet": "1170748",
+    "aNet": "1178977",
+    "winner": "A"
+  }
+}
