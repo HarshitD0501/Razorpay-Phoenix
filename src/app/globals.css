@@ -1,48 +1,141 @@
 @import "tailwindcss";
 
-/* Dark-only by design: this is a merchant ops console, not a marketing site.
-   Every colour below was validated against the #0a0c11 surface — lightness
-   band, chroma floor, protan/deutan separation, and contrast — before use.
-   Series hues pass at ΔE 9.4 (CVD) / 26.5 (normal vision). */
+/* Two themes, one set of tokens. Every colour utility resolves through a
+   `--p-*` indirection, so the navbar toggle flips one class on <html> and the
+   whole palette follows — no `dark:` twin on every element.
+   Both palettes were re-validated after the restyle: ink at 17.3/7.3/5.3:1
+   (light) and 17.8/9.0/5.1:1 (dark), every series and status hue ≥4.7:1 on the
+   card it sits on, series triples separated at ΔE ≥21 under protan/deutan.
+   `critical` moved to #e86464 in dark — the old #d03b3b sat at 3.8:1 on the
+   card and only ΔE 6 from series-2 under deuteranopia. */
+
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
 
   /* surfaces */
-  --color-surface-0: #0a0c11;
-  --color-surface-1: #12151d;
-  --color-surface-2: #171b25;
-  --color-line: rgba(255, 255, 255, 0.09);
-  --color-line-strong: rgba(255, 255, 255, 0.16);
+  --color-surface-0: var(--p-surface-0);
+  --color-surface-1: var(--p-surface-1);
+  --color-surface-2: var(--p-surface-2);
+  --color-line: var(--p-line);
+  --color-line-strong: var(--p-line-strong);
 
-  /* ink — 17.3:1 / 8.7:1 / 5.0:1 on surface-0 */
-  --color-ink-1: #f2f4f8;
-  --color-ink-2: #a8b0c0;
-  --color-ink-3: #7b8394;
+  /* ink */
+  --color-ink-1: var(--p-ink-1);
+  --color-ink-2: var(--p-ink-2);
+  --color-ink-3: var(--p-ink-3);
+
+  /* decoration and emphasis — validated as text on both surfaces */
+  --color-brand: var(--p-brand);
 
   /* categorical series, fixed order, never cycled */
-  --color-series-1: #3987e5;
-  --color-series-2: #d95926;
-  --color-series-3: #199e70;
+  --color-series-1: var(--p-series-1);
+  --color-series-2: var(--p-series-2);
+  --color-series-3: var(--p-series-3);
 
   /* status — reserved meaning, always shipped with an icon + label */
-  --color-good: #0ca30c;
-  --color-warning: #fab219;
-  --color-critical: #d03b3b;
+  --color-good: var(--p-good);
+  --color-warning: var(--p-warning);
+  --color-critical: var(--p-critical);
 
   /* chart chrome */
-  --color-grid: #1c2029;
-  --color-baseline: #2a2f3a;
+  --color-grid: var(--p-grid);
+  --color-baseline: var(--p-baseline);
+
+  /* shadow tint — navy on paper, black in the dark, never a white halo */
+  --color-shade: var(--p-shade);
+
+  --animate-blob: blob 9s ease-in-out infinite;
+}
+
+/* Light is the default — the template's warm off-white paper. */
+:root {
+  --p-surface-0: #fdfbf9;
+  --p-surface-1: #ffffff;
+  --p-surface-2: #f1f0f4;
+  --p-line: rgba(15, 23, 42, 0.09);
+  --p-line-strong: rgba(15, 23, 42, 0.16);
+
+  /* 17.3:1 / 7.3:1 / 5.3:1 on surface-0 */
+  --p-ink-1: #0f172a;
+  --p-ink-2: #4b5568;
+  --p-ink-3: #616a7e;
+
+  /* the template's violet, darkened just far enough to clear 4.9:1 as text */
+  --p-brand: #6d4aff;
+
+  /* darkened from the dark-mode hues to clear 4.8:1 on paper */
+  --p-series-1: #2563c9;
+  --p-series-2: #b0431a;
+  --p-series-3: #0d7856;
+
+  --p-good: #067647;
+  --p-warning: #8a5a05;
+  --p-critical: #b52323;
+
+  --p-grid: #e4e2ea;
+  --p-baseline: #cbc9d4;
+  --p-shade: #0f172a;
+
+  --p-wash-1: color-mix(in oklab, var(--p-brand) 22%, transparent);
+  --p-wash-2: color-mix(in oklab, var(--p-series-2) 14%, transparent);
+  --p-scroll: #cbd5e1;
+  --p-glass: rgba(255, 255, 255, 0.7);
+  color-scheme: light;
+}
+
+.dark {
+  --p-surface-0: #0a0c11;
+  --p-surface-1: #12151d;
+  --p-surface-2: #171b25;
+  --p-line: rgba(255, 255, 255, 0.09);
+  --p-line-strong: rgba(255, 255, 255, 0.16);
+
+  /* 17.8:1 / 9.0:1 / 5.1:1 on surface-0 */
+  --p-ink-1: #f2f4f8;
+  --p-ink-2: #a8b0c0;
+  --p-ink-3: #7b8394;
+
+  --p-brand: #9a86ff;
+
+  --p-series-1: #3987e5;
+  --p-series-2: #d95926;
+  --p-series-3: #199e70;
+
+  --p-good: #0ca30c;
+  --p-warning: #fab219;
+  --p-critical: #e86464;
+
+  --p-grid: #1c2029;
+  --p-baseline: #2a2f3a;
+  --p-shade: #000000;
+
+  --p-wash-1: color-mix(in oklab, var(--p-series-1) 16%, transparent);
+  --p-wash-2: color-mix(in oklab, var(--p-series-2) 11%, transparent);
+  --p-scroll: #39404e;
+  --p-glass: rgba(18, 21, 29, 0.7);
+  color-scheme: dark;
 }
 
 html {
-  color-scheme: dark;
   scroll-behavior: smooth;
 }
 
 body {
   background: var(--color-surface-0);
   color: var(--color-ink-1);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--p-scroll);
+  border-radius: 20px;
 }
 
 /* Numbers in columns align; large standalone figures stay proportional. */
@@ -52,38 +145,77 @@ table,
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--color-series-1) 40%, transparent);
+  background: color-mix(in oklab, var(--color-brand) 25%, transparent);
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-series-1);
+  outline: 2px solid var(--color-brand);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* One ambient wash behind the fold. Static gradient, not an animation —
-   nothing here repaints per frame. */
-.aura {
-  background:
-    radial-gradient(58rem 34rem at 12% -8%, color-mix(in oklab, var(--color-series-1) 16%, transparent), transparent 62%),
-    radial-gradient(44rem 30rem at 92% 4%, color-mix(in oklab, var(--color-series-2) 11%, transparent), transparent 60%);
+/* Frosted header, matching the template's translucent bar. */
+.glass {
+  background: var(--p-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-/* Hairline grid, one shade off the surface. Recessive by construction. */
+/* Two ambient blobs behind the fold — the template's signature. Transform-only
+   animation, so it composites off the main thread. */
+.aura {
+  background:
+    radial-gradient(38rem 24rem at 22% -6%, var(--p-wash-1), transparent 62%),
+    radial-gradient(34rem 22rem at 82% 2%, var(--p-wash-2), transparent 60%);
+}
+
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+/* Dot lattice, one shade off the surface. Recessive by construction. */
 .grid-veil {
-  background-image:
-    linear-gradient(to right, var(--color-grid) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-grid) 1px, transparent 1px);
-  background-size: 3.5rem 3.5rem;
-  mask-image: radial-gradient(70% 55% at 50% 0%, #000 0%, transparent 100%);
+  background-image: radial-gradient(var(--color-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 100%);
 }
 
 /* The one place a gradient touches text: the hero's second line. */
 .text-aura {
-  background: linear-gradient(100deg, #f2f4f8 0%, #9bc0f2 42%, #f0a882 100%);
+  background: linear-gradient(
+    100deg,
+    var(--color-brand) 0%,
+    color-mix(in oklab, var(--color-brand) 70%, var(--color-series-1)) 48%,
+    var(--color-series-1) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* Highlighter swipe under a phrase. Sits behind the text, skewed like the
+   template's. */
+.marker {
+  position: relative;
+  display: inline-block;
+}
+.marker::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0.1em 0;
+  height: 0.42em;
+  background: color-mix(in oklab, var(--color-brand) 22%, transparent);
+  transform: skewX(-10deg);
+  z-index: -1;
 }
 
 @media (prefers-reduced-motion: reduce) {

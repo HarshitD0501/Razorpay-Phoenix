@@ -24,7 +24,8 @@ export type Tone = "phoenix" | "baseline" | "muted" | "critical";
 const FILL: Record<Tone, string> = {
   phoenix: "var(--color-series-1)",
   baseline: "var(--color-series-2)",
-  muted: "#39404e",
+  // Chart chrome, so it tracks the theme rather than pinning a dark grey.
+  muted: "var(--color-baseline)",
   // Reserved for a failing measurement, never for emphasis. Wherever it is
   // used, a written label says what failed — colour never carries it alone.
   critical: "var(--color-critical)",

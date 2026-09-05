@@ -3,8 +3,8 @@
     "n": 600,
     "seed": 42,
     "tier": "B",
-    "classifier": "gemini-3.5-flash",
-    "generatedAt": "2026-09-05T15:26:06.060Z"
+    "classifier": "gemini-3.5-flash-lite",
+    "generatedAt": "2026-09-05T16:47:46.758Z"
   },
   "arms": [
     {
@@ -98,121 +98,122 @@
     {
       "arm": "D",
       "label": "+ LLM classifier",
-      "recoveredCount": 428,
-      "recoveredRupees": "1117690",
-      "costRupees": "13571",
-      "netRupees": "1104119",
-      "netVsArm0": "959049",
-      "authAttempts": 145,
-      "customerContacts": 954,
-      "wastedNotifications": 57,
-      "underProposals": 3,
+      "recoveredCount": 427,
+      "recoveredRupees": "1117350",
+      "costRupees": "13812",
+      "netRupees": "1103538",
+      "netVsArm0": "958468",
+      "authAttempts": 178,
+      "customerContacts": 938,
+      "wastedNotifications": 56,
+      "underProposals": 4,
       "vetoesByRule": {
-        "discount_ceiling": 788,
-        "retry_cap_exhausted": 48,
+        "discount_ceiling": 824,
+        "retry_cap_exhausted": 59,
         "retry_into_degraded_rail": 34,
-        "contact_cap": 128,
-        "no_whatsapp_consent": 443
+        "contact_cap": 119,
+        "no_whatsapp_consent": 450
       },
       "actionCounts": {
-        "reschedule_offer": 954,
-        "retry_charge": 145
+        "reschedule_offer": 938,
+        "retry_charge": 178
       },
-      "llmCalls": 0,
-      "llmFallbacks": 1271
+      "llmCalls": 521,
+      "llmFallbacks": 768
     },
     {
       "arm": "E",
       "label": "+ left-shift W0-W2",
-      "recoveredCount": 458,
-      "recoveredRupees": "1201880",
-      "costRupees": "10972",
-      "netRupees": "1190908",
-      "netVsArm0": "1045838",
-      "authAttempts": 106,
-      "customerContacts": 822,
-      "wastedNotifications": 52,
-      "underProposals": 3,
+      "recoveredCount": 457,
+      "recoveredRupees": "1201540",
+      "costRupees": "11206",
+      "netRupees": "1190334",
+      "netVsArm0": "1045264",
+      "authAttempts": 136,
+      "customerContacts": 808,
+      "wastedNotifications": 51,
+      "underProposals": 4,
       "vetoesByRule": {
-        "discount_ceiling": 522,
-        "contact_cap": 107,
+        "discount_ceiling": 555,
+        "contact_cap": 99,
         "upi_autopay_ceiling": 91,
-        "no_whatsapp_consent": 331,
-        "retry_cap_exhausted": 35,
+        "retry_cap_exhausted": 45,
+        "no_whatsapp_consent": 340,
         "retry_into_degraded_rail": 6
       },
       "actionCounts": {
-        "reschedule_offer": 615,
-        "mandate_migrate": 120,
+        "reschedule_offer": 602,
+        "mandate_migrate": 119,
         "rescue_offer": 78,
         "preflight_notify": 52,
         "notify_whatsapp": 25,
-        "retry_charge": 106,
-        "wait": 5,
+        "retry_charge": 136,
+        "wait": 6,
         "notify_email": 10
       },
-      "llmCalls": 0,
-      "llmFallbacks": 1153
+      "llmCalls": 478,
+      "llmFallbacks": 693
     }
   ],
   "recallByPerturbation": {
     "clean": {
       "n": 297,
       "table": "100.0%",
-      "llm": "100.0%",
-      "llmFellBack": 297
+      "llm": "99.7%",
+      "llmFellBack": 175
     },
     "context": {
       "n": 101,
       "table": "50.5%",
-      "llm": "50.5%",
-      "llmFellBack": 101
+      "llm": "71.3%",
+      "llmFellBack": 56
     },
     "contradictory": {
       "n": 103,
       "table": "0.0%",
-      "llm": "0.0%",
-      "llmFellBack": 103
+      "llm": "21.4%",
+      "llmFellBack": 66
     },
     "null_reason": {
       "n": 99,
       "table": "59.6%",
-      "llm": "59.6%",
-      "llmFellBack": 99
+      "llm": "58.6%",
+      "llmFellBack": 54
     }
   },
   "llmFallbackCauses": {
-    "quota/rate-limit": 590,
-    "other error": 10
+    "other error": 10,
+    "quota/rate-limit": 328,
+    "model not confident": 13
   },
   "perturbationSweep": [
     {
       "scale": 0.3,
-      "eNet": "1177609",
+      "eNet": "1178510",
       "aNet": "1178977",
       "eWins": false
     },
     {
       "scale": 0.5,
-      "eNet": "1184316",
+      "eNet": "1184830",
       "aNet": "1178977",
       "eWins": true
     },
     {
       "scale": 1,
-      "eNet": "1190908",
+      "eNet": "1190334",
       "aNet": "1178977",
       "eWins": true
     },
     {
       "scale": 2,
-      "eNet": "1216566",
+      "eNet": "1217943",
       "aNet": "1178977",
       "eWins": true
     },
     {
       "scale": 3,
-      "eNet": "1230984",
+      "eNet": "1244203",
       "aNet": "1178977",
       "eWins": true
     }

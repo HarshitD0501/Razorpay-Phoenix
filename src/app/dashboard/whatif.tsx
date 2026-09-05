@@ -46,17 +46,20 @@ export default function WhatIf() {
   }
 
   return (
-    <div>
-      <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">
+    <div className="relative rounded-2xl border border-line bg-surface-1 p-6 shadow-sm transition-all hover:border-line-strong hover:shadow-lg sm:p-7">
+      <span className="absolute -top-3 left-6 inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-brand shadow-sm ring-1 ring-inset ring-brand/25">
+        Your knobs
+      </span>
+      <h2 className="mt-2 font-display text-xl font-bold tracking-tight">
         What-if — same engine, same batch
       </h2>
-      <div className="mt-3 rounded-2xl border border-line bg-surface-1 p-5">
+      <div className="mt-6">
         <div className="grid gap-4 sm:grid-cols-2">
           {KNOBS.map((k) => (
             <label key={k.key} className="block text-sm">
               <span className="flex justify-between text-ink-2">
                 {k.label}
-                <span className="font-medium tabular-nums text-ink-1">{vals[k.key]}</span>
+                <span className="font-semibold tabular-nums text-ink-1">{vals[k.key]}</span>
               </span>
               <input
                 type="range"
@@ -64,7 +67,7 @@ export default function WhatIf() {
                 max={k.max}
                 value={vals[k.key]}
                 onChange={(e) => setVals({ ...vals, [k.key]: Number(e.target.value) })}
-                className="mt-2 w-full cursor-pointer accent-series-1"
+                className="mt-2 w-full cursor-pointer accent-brand"
                 aria-label={k.label}
               />
             </label>
@@ -74,7 +77,7 @@ export default function WhatIf() {
           onClick={run}
           disabled={busy}
           whileTap={{ scale: 0.97 }}
-          className="mt-5 rounded-xl bg-ink-1 px-4 py-2 text-sm font-medium text-surface-0 transition-colors hover:bg-white disabled:opacity-40"
+          className="mt-6 rounded-full bg-ink-1 px-5 py-2.5 text-sm font-semibold text-surface-0 shadow-sm transition-all hover:shadow-md disabled:opacity-40"
         >
           {busy ? "Re-running the batch…" : "Re-run the batch"}
         </motion.button>
@@ -87,9 +90,9 @@ export default function WhatIf() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-5 border-t border-line pt-4 text-sm"
+              className="mt-6 border-t border-line pt-5 text-sm"
             >
-              <p className="text-base font-medium">{out.verdict}</p>
+              <p className="font-display text-lg font-bold tracking-tight">{out.verdict}</p>
               <div className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
                 <Row k="do nothing" v={rs(out.baseline.doNothing)} />
                 <Row k="Razorpay default" v={rs(out.baseline.razorpayDefault)} />
