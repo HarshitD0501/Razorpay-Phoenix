@@ -1,29 +1,100 @@
 @import "tailwindcss";
 
-:root {
-  --ink: #0b0d12;
-  --paper: #f7f7f5;
+/* Dark-only by design: this is a merchant ops console, not a marketing site.
+   Every colour below was validated against the #0a0c11 surface — lightness
+   band, chroma floor, protan/deutan separation, and contrast — before use.
+   Series hues pass at ΔE 9.4 (CVD) / 26.5 (normal vision). */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+  /* surfaces */
+  --color-surface-0: #0a0c11;
+  --color-surface-1: #12151d;
+  --color-surface-2: #171b25;
+  --color-line: rgba(255, 255, 255, 0.09);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+
+  /* ink — 17.3:1 / 8.7:1 / 5.0:1 on surface-0 */
+  --color-ink-1: #f2f4f8;
+  --color-ink-2: #a8b0c0;
+  --color-ink-3: #7b8394;
+
+  /* categorical series, fixed order, never cycled */
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-series-3: #199e70;
+
+  /* status — reserved meaning, always shipped with an icon + label */
+  --color-good: #0ca30c;
+  --color-warning: #fab219;
+  --color-critical: #d03b3b;
+
+  /* chart chrome */
+  --color-grid: #1c2029;
+  --color-baseline: #2a2f3a;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--paper);
-  color: var(--ink);
-  font-feature-settings: "tnum" 1;
+  background: var(--color-surface-0);
+  color: var(--color-ink-1);
 }
 
-/* The rescue card slide-in. One transition — Framer Motion is not installed and
-   is not needed for this. */
-.slide-in {
-  animation: slide-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+/* Numbers in columns align; large standalone figures stay proportional. */
+table,
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
-@keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
+
+::selection {
+  background: color-mix(in oklab, var(--color-series-1) 40%, transparent);
 }
+
+*:focus-visible {
+  outline: 2px solid var(--color-series-1);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* One ambient wash behind the fold. Static gradient, not an animation —
+   nothing here repaints per frame. */
+.aura {
+  background:
+    radial-gradient(58rem 34rem at 12% -8%, color-mix(in oklab, var(--color-series-1) 16%, transparent), transparent 62%),
+    radial-gradient(44rem 30rem at 92% 4%, color-mix(in oklab, var(--color-series-2) 11%, transparent), transparent 60%);
+}
+
+/* Hairline grid, one shade off the surface. Recessive by construction. */
+.grid-veil {
+  background-image:
+    linear-gradient(to right, var(--color-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-grid) 1px, transparent 1px);
+  background-size: 3.5rem 3.5rem;
+  mask-image: radial-gradient(70% 55% at 50% 0%, #000 0%, transparent 100%);
+}
+
+/* The one place a gradient touches text: the hero's second line. */
+.text-aura {
+  background: linear-gradient(100deg, #f2f4f8 0%, #9bc0f2 42%, #f0a882 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .slide-in {
-    animation: none;
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

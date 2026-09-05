@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
 type Out = {
   verdict: string;
@@ -45,17 +46,17 @@ export default function WhatIf() {
   }
 
   return (
-    <section className="mt-10">
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-neutral-500">
+    <div>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">
         What-if — same engine, same batch
       </h2>
-      <div className="mt-3 rounded-xl border border-neutral-300 bg-white p-5">
+      <div className="mt-3 rounded-2xl border border-line bg-surface-1 p-5">
         <div className="grid gap-4 sm:grid-cols-2">
           {KNOBS.map((k) => (
             <label key={k.key} className="block text-sm">
-              <span className="flex justify-between text-neutral-600">
+              <span className="flex justify-between text-ink-2">
                 {k.label}
-                <span className="font-medium tabular-nums text-neutral-900">{vals[k.key]}</span>
+                <span className="font-medium tabular-nums text-ink-1">{vals[k.key]}</span>
               </span>
               <input
                 type="range"
@@ -63,59 +64,69 @@ export default function WhatIf() {
                 max={k.max}
                 value={vals[k.key]}
                 onChange={(e) => setVals({ ...vals, [k.key]: Number(e.target.value) })}
-                className="mt-1 w-full accent-neutral-900"
+                className="mt-2 w-full cursor-pointer accent-series-1"
                 aria-label={k.label}
               />
             </label>
           ))}
         </div>
-        <button
+        <motion.button
           onClick={run}
           disabled={busy}
-          className="mt-4 rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white transition hover:bg-neutral-700 disabled:opacity-40"
+          whileTap={{ scale: 0.97 }}
+          className="mt-5 rounded-xl bg-ink-1 px-4 py-2 text-sm font-medium text-surface-0 transition-colors hover:bg-white disabled:opacity-40"
         >
           {busy ? "Re-running the batch…" : "Re-run the batch"}
-        </button>
+        </motion.button>
 
-        {out && (
-          <div className="mt-5 border-t border-neutral-200 pt-4 text-sm">
-            <p className="text-lg font-semibold">{out.verdict}</p>
-            <div className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
-              <Row k="do nothing" v={rs(out.baseline.doNothing)} />
-              <Row k="Razorpay default" v={rs(out.baseline.razorpayDefault)} />
-              <Row k="Phoenix defaults" v={rs(out.baseline.phoenixDefaults)} />
-              <Row k="your settings" v={rs(out.tuned.net)} />
-              <Row k="recovered" v={String(out.tuned.recovered)} />
-              <Row k="auth attempts" v={String(out.tuned.authAttempts)} />
-              <Row k="customer contacts" v={String(out.tuned.contacts)} />
-              <Row
-                k="wasted notifications"
-                v={`${out.tuned.wastedNotifications} (would have paid anyway)`}
-              />
-            </div>
-            <p className="mt-3 text-xs text-neutral-500">
-              Vetoes fired:{" "}
-              {Object.entries(out.tuned.vetoesByRule)
-                .sort((a, b) => b[1] - a[1])
-                .map(([k, v]) => `${k} ×${v}`)
-                .join(" · ") || "none"}
-            </p>
-            <p className="mt-2 text-xs text-neutral-500">
-              n={out.n}, seed 42. Loosening a cap can lower net — the ladder spends attention and
-              attention has a price.
-            </p>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {out && (
+            <motion.div
+              key={out.verdict + out.tuned.net}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-5 border-t border-line pt-4 text-sm"
+            >
+              <p className="text-base font-medium">{out.verdict}</p>
+              <div className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                <Row k="do nothing" v={rs(out.baseline.doNothing)} />
+                <Row k="Razorpay default" v={rs(out.baseline.razorpayDefault)} />
+                <Row k="Phoenix defaults" v={rs(out.baseline.phoenixDefaults)} />
+                <Row k="your settings" v={rs(out.tuned.net)} />
+                <Row k="recovered" v={String(out.tuned.recovered)} />
+                <Row k="auth attempts" v={String(out.tuned.authAttempts)} />
+                <Row k="customer contacts" v={String(out.tuned.contacts)} />
+                <Row
+                  k="wasted notifications"
+                  v={`${out.tuned.wastedNotifications} (would have paid anyway)`}
+                />
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-ink-3">
+                Vetoes fired:{" "}
+                {Object.entries(out.tuned.vetoesByRule)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([k, v]) => `${k} ×${v}`)
+                  .join(" · ") || "none"}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-ink-3">
+                n={out.n}, seed 42. Loosening a cap can lower net — the ladder spends attention and
+                attention has a price.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </section>
+    </div>
   );
 }
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div className="flex justify-between border-b border-neutral-100 py-1">
-      <span className="text-neutral-600">{k}</span>
-      <span className="tabular-nums">{v}</span>
+    <div className="flex justify-between border-b border-line/60 py-1.5">
+      <span className="text-ink-2">{k}</span>
+      <span className="tabular-nums text-ink-1">{v}</span>
     </div>
   );
 }
