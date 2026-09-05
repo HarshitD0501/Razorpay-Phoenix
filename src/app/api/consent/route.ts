@@ -9,13 +9,16 @@
  */
 import { NextResponse } from "next/server";
 import { append, read } from "@/core/audit";
+import { readJson } from "@/core/req";
 
 export async function POST(req: Request) {
-  const { consentToken, method, paymentId } = (await req.json()) as {
+  const body = await readJson<{
     consentToken?: string;
     method?: string;
     paymentId?: string;
-  };
+  }>(req);
+  if (body instanceof Response) return body;
+  const { consentToken, method, paymentId } = body;
 
   // The token must match a diagnosis this server actually issued — a client
   // cannot mint consent for a session that never failed.

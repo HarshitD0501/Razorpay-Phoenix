@@ -36,10 +36,18 @@ const COPY: Record<ActionKind, (rs: number) => string> = {
 };
 
 export async function POST(req: Request) {
-  const form = await req.formData();
+  // Twilio retries on 5xx, so a body we cannot parse must be a 400 — otherwise one
+  // malformed delivery becomes a retry loop against a route that will never accept it.
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return new Response("expected form-encoded body", { status: 400 });
+  }
   const from = String(form.get("From") ?? "");
   const text = String(form.get("Body") ?? "");
   const messageSid = String(form.get("MessageSid") ?? "");
+  if (!from) return new Response("From is required", { status: 400 });
 
   const intent = intentOf(text);
   const invoiceRupees = 499;

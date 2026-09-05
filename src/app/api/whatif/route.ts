@@ -8,6 +8,7 @@
  */
 import { NextResponse } from "next/server";
 import Decimal from "decimal.js";
+import { readJson } from "@/core/req";
 import { DEFAULTS, runArm, type Params } from "@/eval/arms";
 import { generate } from "@/sim/generate";
 
@@ -15,7 +16,8 @@ import { generate } from "@/sim/generate";
 const cases = generate(300, 42);
 
 export async function POST(req: Request) {
-  const over = (await req.json()) as Partial<Params>;
+  const over = await readJson<Partial<Params>>(req);
+  if (over instanceof Response) return over;
   const params: Params = { ...DEFAULTS, ...over };
 
   const [base0, baseA, baseE, tuned] = await Promise.all([
