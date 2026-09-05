@@ -84,6 +84,15 @@ const RULES: {
     to: "notify_email", // the swap is not available; say so, don't offer it
   },
   {
+    id: "discount_unpriced",
+    // A discount of Rs 0 is not a free discount, it is a missing input. Priced at
+    // zero it costs nothing, so it wins on EV against every honest rung — the exact
+    // unpriced-concession error this repo argues against. One guard here rather than
+    // in each caller: any caller that has not decided the amount cannot offer one.
+    applies: (a, c) => a === "discount_offer" && !(c.discountRupees > 0),
+    to: "reschedule_offer",
+  },
+  {
     id: "discount_ceiling",
     applies: (a, c) => a === "discount_offer" && c.discountRupees > c.discountCeilingRupees,
     to: "reschedule_offer", // cheaper rung of the same ladder

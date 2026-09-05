@@ -4,23 +4,39 @@
 
 ---
 
-## 0. Status — steps 0–6 and 8 shipped
+## 0. Status — steps 0–8 shipped; tier A is live
 
 | # | Step | State | Evidence |
 |---|---|---|---|
 | 0 | Config: `package.json`, `tsconfig`, postcss, `.gitignore` (before any key), `.env.example` | **done** | `npx tsc --noEmit` clean |
-| 1 | Simulator, `decide()` core, gate, append-only audit, eval harness | **done** | `src/core/`, `src/sim/`, `npm test` 13/13 |
+| 1 | Simulator, `decide()` core, gate, append-only audit, eval harness | **done** | `src/core/`, `src/sim/`, `npm test` 14/14 |
 | 2 | Arms 0–E, per-perturbation ablation, 0.3×–3× sweep, adversarial arm | **done** | `npm run eval` → `results/arms.json` |
-| 3 | Tier A adapters + probes + poller + webhook HMAC + replay check | **written, unrun** | needs `rzp_test_` keys in `.env` |
-| 4 | WhatsApp outbound (Twilio) | **written, unrun** | needs `TWILIO_*` + `join <code>` from the demo phone |
+| 3 | Tier A adapters + probes + poller + webhook HMAC + replay check | **done, run live** | see below |
+| 4 | WhatsApp outbound (Twilio) | **done, delivered** | `twilio 201 SMac2f664d…` + live payment link |
 | 5 | W0 rescue surface + live downtime join | **done** | `/` → pick a failure → rescue card |
 | 6 | Dashboard: arms table, ablation, sweep, What-If, audit viewer | **done** | `/dashboard` |
-| 7 | WhatsApp inbound two-way agent | **done locally**, tunnel not attempted | `POST /api/whatsapp` → TwiML; 3-turn ladder verified over HTTP |
+| 7 | WhatsApp inbound two-way agent | **done locally**, tunnel not attempted | 3-turn ladder verified over HTTP |
 | 8 | README with per-number tier labels + honest limits | **done** | `README.md` |
 
-`npx next build` compiles all 10 routes. Steps 3/4/7 are the only ones gated on
-credentials I do not hold — the code paths exist and typecheck, and each one refuses
-loudly rather than silently faking a result when its env vars are absent.
+`npx next build` compiles all 10 routes. `git init` + first commit done; **not pushed** —
+that needs a decision about which account/remote.
+
+### Tier A, actually run against the live test API (5 Sept 2026)
+
+| Probe | Result |
+|---|---|
+| `GET /v1/payments/downtimes` | **8 active** — netbanking DLXB, UPI kotak811, FPX BNPA_C, IDIB, 5× card; all `started`/`high`. W0's "not your card" line is joined against this, not a fixture. |
+| `orders.create` ×2, identical `receipt` | **200 + 200, two distinct orders** (`order_TYKiTuNmQad8HA`, `order_TYKiU9GTBQayTA`). No dedupe. |
+| `payment_links.create` ×2, identical `reference_id` | **200 then 400** — "already exists". Dedupes. |
+| Webhook replayed twice + tampered | `duplicate:false` → `duplicate:true` → **401 bad signature**. |
+| WhatsApp outbound | **Twilio 201**, real message on the demo phone carrying `https://rzp.io/rzp/fHsItNQ`. |
+
+The idempotency result is the useful one: the two calls Phoenix makes have **opposite**
+duplicate semantics. `receipt` is a free-text label, so a retried `orders.create` bills
+twice; `reference_id` is a real server-side guard but its 400 arrives *after* the request
+left. That asymmetry is why dedupe lives in `src/core/audit.ts` on our side of the
+network call instead of being hoped for on theirs.
+
 
 ### What the numbers came out as
 
@@ -63,6 +79,20 @@ case. That is the narrow, specific place the LLM classifier earns its bill.
    rendered as "SBIN declined this attempt". A timeout is not a decline, and overstating it
    is the same sloppiness this repo argues against. Now: "SBIN didn't respond in time —
    payment timed out. That's their side, not your card."
+4. **A discount priced at ₹0 beat every honest rung.** Found by running the live
+   WhatsApp script, which printed `decide() chose: discount_offer` — flatly contradicting
+   the discount-last ladder. Cause: the script passed `discountRupees: 0`, so the
+   concession cost nothing and won on EV. `gate()` now has a `discount_unpriced` rule —
+   an unpriced discount is a *missing input*, not a free one — which closes it for every
+   caller rather than for the one script. Re-ran the eval: numbers identical, so this
+   never touched the reported results.
+5. **Intent keywords matched mid-word.** `/\bstop|less|done\b/`-style alternations only
+   anchor the first and last alternative, so "nonstop" read as cancel and "unless" as a
+   price objection — a mid-word hit silently picks the wrong ladder rung. Every
+   alternation now carries a *leading* `\b` and stays open at the end, so inflections
+   ("cheaper", "cancelled") still land. Also added "too much", which surfaced the moment
+   I tested a realistic phrasing: it is the commonest price objection and carries no
+   price keyword at all.
 
 ---
 

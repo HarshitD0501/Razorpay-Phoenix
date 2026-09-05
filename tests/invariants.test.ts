@@ -140,6 +140,26 @@ test("ladder reaches for a discount only after a downgrade was declined", () => 
   // complaint, which is the case a flat keyword table gets wrong.
   expect(rungFor(intentOf("too expensive, cancel it"), ["downgrade_offer"])).toBe("pause_offer");
   expect(rungFor(intentOf("cancel my plan"), ["downgrade_offer"])).toBe("pause_offer");
+  // "too much" carries no price keyword; it is still the commonest phrasing.
+  expect(intentOf("this is too much")).toBe("cheaper");
+  // Keywords must not match mid-word — these three are why every alternation
+  // carries a leading \b. A mid-word hit silently picks the wrong rung.
+  expect(intentOf("unless something changes")).toBe("unknown");
+  expect(intentOf("the alerts are nonstop")).toBe("unknown");
+  // ...while inflections must still land.
+  expect(intentOf("got a cheaper option?")).toBe("cheaper");
+  expect(intentOf("already cancelled")).toBe("cancel");
+});
+
+test("an unpriced discount is a missing input, not a free concession", () => {
+  // Rs 0 costs nothing, so a naive EV ranking picks it over every honest rung.
+  // gate() must refuse it before decide() ever gets to price it.
+  const r = gate("discount_offer", ctx({ discountRupees: 0 }));
+  expect(r.action).toBe("reschedule_offer");
+  expect(r.vetoes).toContain("discount_unpriced");
+  // And the end-to-end consequence: no caller can reach a discount with 0 set.
+  expect(decide({ bucket: "LIKELY", invoiceRupees: 499, ctx: ctx({ discountRupees: 0 }) }).chosen)
+    .not.toBe("discount_offer");
 });
 
 test("simulator is reproducible and shares no constants with agent beliefs", async () => {

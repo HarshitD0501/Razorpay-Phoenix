@@ -36,7 +36,10 @@ const d = decide({
     retryCap: DEFAULTS.retryCap,
     mandateAmountRupees: invoiceRupees,
     upiAutopayCeilingRupees: DEFAULTS.upiAutopayCeilingRupees,
-    discountRupees: 0,
+    // Price the concession honestly. Passing 0 here would tell decide() a discount
+    // is free, and a free concession beats every honest rung on EV — gate() now
+    // vetoes that, but the caller should still hand it a real number.
+    discountRupees: Math.round(invoiceRupees * 0.2),
     discountCeilingRupees: DEFAULTS.discountCeilingRupees,
     railDegraded: false,
   },
