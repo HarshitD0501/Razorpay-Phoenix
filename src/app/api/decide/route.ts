@@ -5,7 +5,7 @@
  * Same decide() as W0 and the eval. There is no second engine.
  */
 import { NextResponse } from "next/server";
-import { classifyByTable } from "@/core/classify";
+import { classifyByLlm } from "@/core/classify";
 import { decide } from "@/core/decide";
 import { readJson } from "@/core/req";
 import { DEFAULTS } from "@/eval/arms";
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "envelope is required" }, { status: 400 });
   }
 
-  const cls = classifyByTable(body.envelope);
+  const cls = await classifyByLlm(body.envelope);
   const invoice = body.invoiceRupees ?? 499;
 
   const perWindow = WINDOWS.map((window: Window) => {

@@ -72,8 +72,8 @@ export function classifyByTable(e: FailureEnvelope): Classification {
 
 const LlmOut = z.object({
   bucket: z.enum(BUCKETS),
-  reason: z.string().min(1).max(64),
-  rationale: z.string().min(1).max(240),
+  reason: z.string().min(1),
+  rationale: z.string().min(1),
   confident: z.boolean(),
 });
 

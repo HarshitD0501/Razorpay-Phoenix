@@ -12,7 +12,7 @@
  */
 import { NextResponse } from "next/server";
 import { append } from "@/core/audit";
-import { classifyByTable } from "@/core/classify";
+import { classifyByLlm } from "@/core/classify";
 import { decide } from "@/core/decide";
 import { readJson } from "@/core/req";
 import { DEFAULTS } from "@/eval/arms";
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         (env.bank && (d.instrument?.bank === env.bank || d.instrument?.issuer === env.bank))),
   );
 
-  const cls = classifyByTable(env);
+  const cls = await classifyByLlm(env);
   const d = decide({
     bucket: cls.bucket,
     invoiceRupees: env.amountRupees ?? 499,
