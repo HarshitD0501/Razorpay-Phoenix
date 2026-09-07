@@ -120,5 +120,7 @@ export async function POST(req: Request) {
     consentToken: `rescue:${env.paymentId}`,
     liveDowntimeCount: live.length,
     rationale: cls.rationale,
+    source: cls.source,
+    model: cls.source === "llm" ? "Gemini 3.5 Flash" : "Fallback Rule Table",
   });
 }

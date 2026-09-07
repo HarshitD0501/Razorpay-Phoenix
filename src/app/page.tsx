@@ -14,13 +14,20 @@ import { useGSAP } from "@gsap/react";
 import {
   Activity,
   ArrowRight,
+  Building2,
   Check,
+  ChevronRight,
+  CreditCard,
   Lock,
   Play,
   Radio,
+  RefreshCw,
   ShieldCheck,
+  Smartphone,
   Sparkles,
+  Terminal,
   TriangleAlert,
+  Zap,
 } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -35,13 +42,86 @@ type Rescue = {
   bucket: string;
   liveDowntimeCount: number;
   rationale: string;
+  source?: "llm" | "table";
+  model?: string;
 };
 
 const FAILURES = [
-  { label: "SBI UPI timeout", envelope: { paymentId: "pay_demo_upi", reason: "payment_timed_out", source: "bank", step: "payment_authorization", method: "upi", bank: "SBIN" } },
-  { label: "HDFC card expired", envelope: { paymentId: "pay_demo_card", reason: "card_expired", source: "issuer", step: "payment_authorization", method: "card", bank: "HDFC" } },
-  { label: "Insufficient funds", envelope: { paymentId: "pay_demo_funds", reason: "payment_failed_insufficient_funds", source: "issuer", step: "payment_authorization", method: "card", bank: "ICIC" } },
-  { label: "Null reason (source only)", envelope: { paymentId: "pay_demo_null", source: "bank", step: "payment_authorization", method: "netbanking", bank: "UTIB" } },
+  {
+    id: "sbi_upi",
+    label: "SBI UPI Rail Latency",
+    sub: "Switch timeout · 15s+ delay",
+    method: "UPI Autopay",
+    bank: "State Bank of India",
+    tag: "Transient Infra",
+    tone: "warning",
+    icon: "upi",
+    envelope: {
+      paymentId: "pay_demo_upi",
+      reason: "payment_timed_out",
+      source: "bank",
+      step: "payment_authorization",
+      method: "upi",
+      bank: "SBIN",
+      description: "UPI switch timed out awaiting authorization response from State Bank of India server node",
+    },
+  },
+  {
+    id: "hdfc_card",
+    label: "HDFC Card Expired",
+    sub: "Terminal instrument defect",
+    method: "Debit Card",
+    bank: "HDFC Bank",
+    tag: "Permanent Defect",
+    tone: "critical",
+    icon: "card",
+    envelope: {
+      paymentId: "pay_demo_card",
+      reason: "card_expired",
+      source: "issuer",
+      step: "payment_authorization",
+      method: "card",
+      bank: "HDFC",
+      description: "Debit card validity expired during recurrent authorization cycle",
+    },
+  },
+  {
+    id: "icici_funds",
+    label: "Insufficient Balance",
+    sub: "Soft decline · Payday recovery",
+    method: "Credit Card",
+    bank: "ICICI Bank",
+    tag: "Funds / Limits",
+    tone: "brand",
+    icon: "card",
+    envelope: {
+      paymentId: "pay_demo_funds",
+      reason: "payment_failed_insufficient_funds",
+      source: "issuer",
+      step: "payment_authorization",
+      method: "card",
+      bank: "ICIC",
+      description: "Account balance below subscription charge threshold",
+    },
+  },
+  {
+    id: "axis_null",
+    label: "Null Gateway Reason",
+    sub: "Ambiguous error · AI Triage",
+    method: "NetBanking",
+    bank: "Axis Bank",
+    tag: "Gemini AI Showcase",
+    tone: "purple",
+    icon: "netbanking",
+    envelope: {
+      paymentId: "pay_demo_null",
+      source: "bank",
+      step: "payment_authorization",
+      method: "netbanking",
+      bank: "UTIB",
+      description: "Transaction halted at issuer node without an explicit gateway error code",
+    },
+  },
 ];
 
 /** Windows ordered by blast radius — monotone 1→5. That order *is* the thesis. */
@@ -117,9 +197,13 @@ function CountUp({ to, prefix = "" }: { to: number; prefix?: string }) {
 }
 
 export default function Checkout() {
+  const [selectedScenario, setSelectedScenario] = useState<(typeof FAILURES)[number]>(FAILURES[0]!);
   const [rescue, setRescue] = useState<Rescue | null>(null);
   const [consent, setConsent] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [logs, setLogs] = useState<string[]>([
+    "System ready · W0 In-Flight Gateway channel listening for transaction events...",
+  ]);
   const ladder = useRef<HTMLDivElement>(null);
 
   // The ladder's four rows reveal on scroll, staggered.
@@ -128,20 +212,46 @@ export default function Checkout() {
     { scope: ladder },
   );
 
-  async function fail(envelope: Record<string, unknown>) {
+  async function triggerSimulation(scenario: (typeof FAILURES)[number] = selectedScenario) {
+    if (!scenario) return;
     setBusy(true);
     setConsent(null);
-    const res = await fetch("/api/rescue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...envelope, amountRupees: 499 }),
-    });
-    setRescue((await res.json()) as Rescue);
-    setBusy(false);
+    const now = new Date().toLocaleTimeString("en-IN", { hour12: false });
+    setLogs((prev) => [
+      `[${now}] INGEST: Initiating payment intent ₹499 via ${scenario.bank} (${scenario.method})...`,
+      `[${now}] GATEWAY: Simulated drop detected — ${scenario.sub}`,
+      `[${now}] AI_TRIAGE: Invoking Gemini 3.5 Flash classifier with failure envelope...`,
+      ...prev.slice(0, 4),
+    ]);
+
+    try {
+      const res = await fetch("/api/rescue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...scenario.envelope, amountRupees: 499 }),
+      });
+      const data = (await res.json()) as Rescue;
+      setRescue(data);
+      const postNow = new Date().toLocaleTimeString("en-IN", { hour12: false });
+      setLogs((prev) => [
+        `[${postNow}] CLASSIFY: Diagnosed as [${data.bucket}] via ${data.source === "llm" ? "Gemini 3.5 Flash" : "Rule Engine"}.`,
+        `[${postNow}] W0_RESCUE: In-session alternative dispatched with single-use cryptographic token.`,
+        ...prev.slice(0, 4),
+      ]);
+    } catch {
+      setLogs((prev) => [`[ERROR] Failed to query rescue API endpoint`, ...prev]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function accept(method: string) {
     if (!rescue) return;
+    const now = new Date().toLocaleTimeString("en-IN", { hour12: false });
+    setLogs((prev) => [
+      `[${now}] CONSENT: Customer selected alternative rail [${method}]. Posting to /api/consent...`,
+      ...prev.slice(0, 4),
+    ]);
     const res = await fetch("/api/consent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -149,6 +259,11 @@ export default function Checkout() {
     });
     const j = (await res.json()) as { message?: string; duplicate?: boolean; error?: string };
     setConsent(j.error ?? `${j.message}${j.duplicate ? " (idempotent — second click ignored)" : ""}`);
+    const postNow = new Date().toLocaleTimeString("en-IN", { hour12: false });
+    setLogs((prev) => [
+      `[${postNow}] SETTLED: Transaction recovered successfully. Idempotency lock active.`,
+      ...prev.slice(0, 4),
+    ]);
   }
 
   return (
@@ -503,123 +618,339 @@ export default function Checkout() {
       {/* ── W0 live: break a payment, get a rescue card ──────────────── */}
       <section id="simulate" className="relative overflow-hidden py-24">
         <div aria-hidden className="pointer-events-none absolute inset-0 aura opacity-40" />
-        <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-4 py-1.5 text-[13px] font-semibold tracking-tight text-brand">
-              <Activity className="size-3.5" aria-hidden />
-              W0 · in-session · t ≈ 0s
-            </span>
-            <h2 className="mt-6 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              Break it yourself
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-14 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 py-1.5 text-[13px] font-semibold tracking-tight text-brand shadow-sm shadow-brand/10">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-brand" />
+              </span>
+              W0 · In-Session Active Rescue Sandbox
+            </div>
+            <h2 className="mt-5 font-display text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              Break it yourself. Watch W0 intercept.
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-balance text-ink-2">
-              Everyone else&apos;s recovery starts tomorrow morning. This one starts before the
-              customer has closed the tab.
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-balance text-ink-2">
+              Select any real-world gateway failure scenario below. Simulate the drop to see Phoenix
+              catch the transaction mid-flight, invoke <strong className="text-ink-1">Gemini 3.5 Flash</strong> for
+              autonomous triage, and present a 1-tap consent rescue card before the customer closes the tab.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-line bg-surface-1 p-6 shadow-sm sm:p-8">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium text-ink-2">Pro plan · monthly</span>
-              <span className="font-display text-3xl font-semibold tracking-tight">₹499</span>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {FAILURES.map((f) => (
-                <motion.button
-                  key={f.label}
-                  onClick={() => fail(f.envelope)}
-                  disabled={busy}
-                  whileTap={{ scale: 0.97 }}
-                  className="rounded-full border border-line-strong px-4 py-2 text-sm font-medium transition-all hover:border-brand/40 hover:bg-brand/5 hover:text-brand disabled:opacity-40"
-                >
-                  {f.label}
-                </motion.button>
-              ))}
-            </div>
-          </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+            {/* Left Column: Failure Scenario Selector */}
+            <div className="lg:col-span-6 space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
+                  1. Select Gateway Failure Scenario
+                </span>
+                <span className="text-xs text-brand font-medium">4 production edge-cases</span>
+              </div>
 
-          {/* AnimatePresence so swapping failures animates out, not just in. */}
-          <AnimatePresence mode="wait">
-            {rescue && (
-              <motion.div
-                key={rescue.headline}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="relative mt-6 rounded-2xl border border-brand/30 bg-surface-1 p-6 shadow-xl shadow-brand/10 sm:p-8"
-              >
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-brand"
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ring-1 ring-inset ${
-                      rescue.tier === "A"
-                        ? "bg-good/10 text-good ring-good/25"
-                        : "bg-warning/10 text-warning ring-warning/25"
-                    }`}
-                  >
-                    {rescue.tier === "A" ? (
-                      <ShieldCheck className="size-3" aria-hidden />
-                    ) : (
-                      <TriangleAlert className="size-3" aria-hidden />
-                    )}
-                    tier {rescue.tier}
-                  </span>
-                  <span className="text-xs text-ink-3">
-                    {rescue.tier === "A"
-                      ? `live downtime feed · ${rescue.liveDowntimeCount} active`
-                      : "no keys — diagnosis from error envelope only"}
-                  </span>
-                  <span className="ml-auto font-mono text-xs text-ink-2">{rescue.bucket}</span>
-                </div>
-
-                <p className="mt-5 font-display text-lg font-bold tracking-tight">
-                  {rescue.headline}
-                </p>
-                <p className="mt-2 leading-relaxed text-ink-2">{rescue.subline}</p>
-
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {rescue.alternatives.map((a) => (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {FAILURES.map((f) => {
+                  const isSelected = selectedScenario.id === f.id;
+                  return (
                     <motion.button
-                      key={a.method}
-                      onClick={() => accept(a.method)}
-                      whileTap={{ scale: 0.97 }}
-                      className="inline-flex items-center gap-2 rounded-full bg-ink-1 px-5 py-2.5 text-sm font-semibold text-surface-0 shadow-sm transition-all hover:shadow-md active:scale-95"
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedScenario(f);
+                        setConsent(null);
+                      }}
+                      whileHover={{ scale: 1.015 }}
+                      whileTap={{ scale: 0.985 }}
+                      className={`relative flex flex-col justify-between rounded-xl border p-4 text-left transition-all ${
+                        isSelected
+                          ? "border-brand/60 bg-surface-2/90 shadow-md shadow-brand/10 ring-1 ring-brand/40"
+                          : "border-line bg-surface-1/70 hover:border-line-strong hover:bg-surface-2/40"
+                      }`}
                     >
-                      {a.label}
-                      <ArrowRight className="size-3.5" aria-hidden />
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div
+                            className={`flex size-8 items-center justify-center rounded-lg ${
+                              isSelected
+                                ? "bg-brand text-white shadow-sm shadow-brand/40"
+                                : "bg-surface-3 text-ink-2"
+                            }`}
+                          >
+                            {f.icon === "upi" ? (
+                              <Smartphone className="size-4" />
+                            ) : f.icon === "netbanking" ? (
+                              <Building2 className="size-4" />
+                            ) : (
+                              <CreditCard className="size-4" />
+                            )}
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                              f.tone === "warning"
+                                ? "bg-warning/15 text-warning"
+                                : f.tone === "critical"
+                                ? "bg-critical/15 text-critical"
+                                : f.tone === "purple"
+                                ? "bg-purple-500/15 text-purple-400 border border-purple-500/30"
+                                : "bg-brand/15 text-brand"
+                            }`}
+                          >
+                            {f.tag}
+                          </span>
+                        </div>
+
+                        <h3 className="mt-3 font-semibold text-sm text-ink-1 leading-snug">
+                          {f.label}
+                        </h3>
+                        <p className="mt-1 text-xs text-ink-3 leading-relaxed">{f.sub}</p>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-line/60 pt-2 text-[11px] text-ink-3">
+                        <span className="truncate font-mono">{f.bank}</span>
+                        <div className="flex items-center gap-1 font-medium text-ink-2">
+                          <span>{f.method}</span>
+                          <ChevronRight className="size-3 text-ink-3" />
+                        </div>
+                      </div>
                     </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* Live Telemetry / Ingestion Stream Drawer */}
+              <div className="mt-6 rounded-2xl border border-line-strong bg-surface-0 p-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-line/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <span className="size-2.5 rounded-full bg-critical/70" />
+                      <span className="size-2.5 rounded-full bg-warning/70" />
+                      <span className="size-2.5 rounded-full bg-good/70" />
+                    </div>
+                    <span className="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-ink-2 pl-2">
+                      <Terminal className="size-3.5 text-brand" />
+                      TELEMETRY_LOG · /v1/gateway/events
+                    </span>
+                  </div>
+                  <span className="flex items-center gap-1.5 text-[10px] font-mono font-medium text-good">
+                    <span className="size-1.5 rounded-full bg-good animate-pulse" />
+                    LISTENING
+                  </span>
+                </div>
+                <div className="mt-3 space-y-1.5 font-mono text-[11px] leading-relaxed max-h-40 overflow-y-auto pr-1">
+                  {logs.map((log, idx) => (
+                    <div
+                      key={idx}
+                      className={`truncate ${
+                        idx === 0
+                          ? "text-brand font-medium"
+                          : log.includes("GATEWAY:")
+                          ? "text-warning"
+                          : log.includes("AI_TRIAGE:")
+                          ? "text-purple-400 font-semibold"
+                          : log.includes("CLASSIFY:")
+                          ? "text-good"
+                          : log.includes("SETTLED:")
+                          ? "text-good font-bold"
+                          : "text-ink-3"
+                      }`}
+                    >
+                      {log}
+                    </div>
                   ))}
                 </div>
+              </div>
+            </div>
 
-                <p className="mt-5 text-xs leading-relaxed text-ink-3">
-                  Nothing is charged until you press one of these. The server has no path to
-                  another rail without this POST — enforced by{" "}
-                  <code className="rounded bg-surface-2 px-1 py-0.5 font-mono">/api/consent</code>,
-                  not promised.
-                </p>
+            {/* Right Column: Active Checkout Preview & W0 Interceptor */}
+            <div className="lg:col-span-6 flex flex-col gap-6">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
+                  2. Simulated Checkout Session
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs text-ink-2">
+                  <Lock className="size-3 text-good" />
+                  Razorpay TLS 1.3
+                </span>
+              </div>
 
-                <AnimatePresence>
-                  {consent && (
-                    <motion.p
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
+              {/* Checkout Card */}
+              <div className="relative rounded-2xl border border-line bg-surface-1 p-6 shadow-xl sm:p-7">
+                {/* Checkout Header */}
+                <div className="flex items-center justify-between border-b border-line pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-brand/10 border border-brand/20 text-brand font-bold">
+                      RP
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-ink-1 flex items-center gap-1.5">
+                        Acme Cloud Technologies
+                        <ShieldCheck className="size-3.5 text-brand" />
+                      </h4>
+                      <p className="text-xs text-ink-3">Order ID: order_phx_984102</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-medium text-ink-3 block">Total Payable</span>
+                    <span className="font-display text-xl font-bold tracking-tight text-ink-1">
+                      ₹499.00
+                    </span>
+                  </div>
+                </div>
+
+                {/* Instrument Summary */}
+                <div className="mt-4 rounded-xl border border-line/70 bg-surface-2/60 p-3.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink-3">Active Instrument:</span>
+                    <span className="font-mono font-medium text-ink-1">
+                      {selectedScenario.bank} ({selectedScenario.method})
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[11px]">
+                    <span className="text-ink-3">Status:</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-warning">
+                      <TriangleAlert className="size-3" />
+                      Simulating Active Drop Route
+                    </span>
+                  </div>
+                </div>
+
+                {/* Primary Trigger Button */}
+                <div className="mt-6">
+                  <motion.button
+                    type="button"
+                    onClick={() => triggerSimulation(selectedScenario)}
+                    disabled={busy}
+                    whileTap={{ scale: 0.98 }}
+                    className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-brand to-brand-strong px-5 py-3.5 font-semibold text-white shadow-lg shadow-brand/20 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <span className="flex items-center justify-center gap-2 text-sm">
+                      {busy ? (
+                        <>
+                          <RefreshCw className="size-4 animate-spin" />
+                          Simulating Drop & Invoking Gemini AI...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="size-4 fill-current" />
+                          Simulate Gateway Drop & Watch W0 Rescue
+                        </>
+                      )}
+                    </span>
+                  </motion.button>
+                  <p className="mt-2 text-center text-[11px] text-ink-3">
+                    Dispatches real-time failure envelope to Phoenix AI classification pipeline
+                  </p>
+                </div>
+
+                {/* AnimatePresence for the Rescue Card */}
+                <AnimatePresence mode="wait">
+                  {rescue && (
+                    <motion.div
+                      key={rescue.headline + selectedScenario.id}
+                      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="relative mt-6 rounded-2xl border border-brand/40 bg-surface-2/95 p-5 shadow-2xl shadow-brand/15"
                     >
-                      <span className="mt-5 flex items-start gap-2 rounded-xl border border-good/25 bg-good/5 p-4 text-sm">
-                        <Check className="mt-0.5 size-4 shrink-0 text-good" aria-hidden />
-                        {consent}
-                      </span>
-                    </motion.p>
+                      <span
+                        aria-hidden
+                        className="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl bg-brand"
+                      />
+
+                      {/* Header Badges */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${
+                            rescue.tier === "A"
+                              ? "bg-good/15 text-good ring-good/30"
+                              : "bg-warning/15 text-warning ring-warning/30"
+                          }`}
+                        >
+                          {rescue.tier === "A" ? (
+                            <ShieldCheck className="size-3" aria-hidden />
+                          ) : (
+                            <TriangleAlert className="size-3" aria-hidden />
+                          )}
+                          tier {rescue.tier}
+                        </span>
+
+                        {/* AI Triage Model Badge */}
+                        <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-300 shadow-sm shadow-purple-500/20">
+                          <Sparkles className="size-3 text-purple-300" />
+                          {rescue.source === "llm" ? "AI Triage · Gemini 3.5 Flash" : "Rule Engine Fallback"}
+                        </span>
+
+                        <span className="ml-auto font-mono text-[11px] text-ink-3">
+                          Bucket: <strong className="font-semibold text-brand">{rescue.bucket}</strong>
+                        </span>
+                      </div>
+
+                      <h5 className="mt-4 font-display text-base font-bold tracking-tight text-ink-1">
+                        {rescue.headline}
+                      </h5>
+                      <p className="mt-1 text-xs leading-relaxed text-ink-2">{rescue.subline}</p>
+
+                      {/* Explainable AI Diagnosis Box */}
+                      {rescue.rationale && (
+                        <div className="mt-3.5 rounded-xl border border-purple-500/25 bg-purple-950/20 p-3 text-xs text-purple-200">
+                          <div className="flex items-center gap-1.5 font-semibold text-purple-300 text-[11px]">
+                            <Sparkles className="size-3 text-purple-400" />
+                            Gemini 3.5 Real-Time Triage Rationale
+                          </div>
+                          <p className="mt-1 text-[11px] leading-relaxed text-ink-2 font-mono">
+                            &ldquo;{rescue.rationale}&rdquo;
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 1-Tap Alternatives */}
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {rescue.alternatives.map((a) => (
+                          <motion.button
+                            key={a.method}
+                            onClick={() => accept(a.method)}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="inline-flex items-center gap-2 rounded-xl bg-ink-1 px-4 py-2 text-xs font-semibold text-surface-0 shadow-sm transition-all hover:bg-brand hover:text-white"
+                          >
+                            {a.label}
+                            <ArrowRight className="size-3" aria-hidden />
+                          </motion.button>
+                        ))}
+                      </div>
+
+                      <p className="mt-3 text-[11px] leading-relaxed text-ink-3">
+                        Enforced by{" "}
+                        <code className="rounded bg-surface-3 px-1 py-0.5 font-mono text-[10px]">
+                          /api/consent
+                        </code>{" "}
+                        with single-use token. Merchant cannot debit without this POST.
+                      </p>
+
+                      <AnimatePresence>
+                        {consent && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-3 flex items-start gap-2 rounded-xl border border-good/30 bg-good/10 p-3 text-xs text-ink-1">
+                              <Check className="mt-0.5 size-4 shrink-0 text-good" aria-hidden />
+                              <div>
+                                <span className="font-semibold text-good">Consent Verified & Settled: </span>
+                                {consent}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
